@@ -76,7 +76,9 @@ async def test_refusals():
         async def err(method, params):
             return (await c.post("/a2a", json=rpc(method, params))).json()["error"]["code"]
 
-        assert await err("SendMessage", msg("x", taskId="t-1")) == -32004  # continuing a task
+        assert (
+            await err("SendMessage", msg("x", taskId="t-1")) == -32001
+        )  # naming a task that does not exist
         non_text = {
             "message": {
                 "messageId": "m",

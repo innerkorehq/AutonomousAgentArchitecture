@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-from aaa_server import ServerConfig
+from aaa_server import A2AConfig, ServerConfig
 from aaa_server.auth import ApiKeyAuthenticator
 
 from aaa.algos import AskHuman
@@ -26,6 +26,9 @@ async def make(turns):
         algorithms={"ask": algo},
         budget=Budget(max_steps=20, max_tokens=10_000, deadline_s=30.0),
         keepalive_s=0.2,
+        a2a=A2AConfig(
+            algorithm="ask", url="http://agent.example", name="Asker", description="asks"
+        ),
     )
     return Env(engine, cfg, algo), engine  # type: ignore[arg-type]
 
@@ -162,3 +165,82 @@ async def test_the_question_appears_on_the_event_stream():
     assert (
         '"answer"' not in stream.split("event: human.requested")[1].split("\n\n")[0]
     )  # the answer itself is not broadcast
+
+
+# -- over A2A -----------------------------------------------------------------------------------------
+def rpc(method, params=None, id=1):
+    return {"jsonrpc": "2.0", "id": id, "method": method, "params": params or {}}
+
+
+def message(text, **extra):
+    return {"message": {"messageId": "m", "role": "ROLE_USER", "parts": [{"text": text}], **extra}}
+
+
+async def waiting_task(client, env):
+    t = (
+        await client.post(
+            "/a2a",
+            json=rpc(
+                "SendMessage",
+                {**message("Book a table"), "configuration": {"returnImmediately": True}},
+            ),
+        )
+    ).json()["result"]["task"]
+    for _ in range(200):
+        state = (await client.post("/a2a", json=rpc("GetTask", {"id": t["id"]}))).json()["result"][
+            "status"
+        ]
+        if state["state"] == "TASK_STATE_INPUT_REQUIRED":
+            return t["id"], state
+        await asyncio.sleep(0.02)
+    raise AssertionError("the task never asked")
+
+
+async def test_a_waiting_question_is_input_required_and_a_message_with_the_task_id_answers_it():
+    env, engine = await make([ASK, FINAL])
+    async with engine, env.client("key-acme-answerer") as c:
+        tid, state = await waiting_task(c, env)
+        assert "For how many people?" in state["message"]["parts"][0]["text"]
+        done = (await c.post("/a2a", json=rpc("SendMessage", message("4", taskId=tid)))).json()[
+            "result"
+        ]["task"]
+        assert done["id"] == tid
+        for _ in range(200):
+            got = (await c.post("/a2a", json=rpc("GetTask", {"id": tid}))).json()["result"]
+            if got["status"]["state"] == "TASK_STATE_COMPLETED":
+                break
+            await asyncio.sleep(0.02)
+        assert got["artifacts"][0]["parts"][0]["text"] == "Table booked for 4."
+        again = (await c.post("/a2a", json=rpc("SendMessage", message("5", taskId=tid)))).json()
+        assert again["error"]["code"] == -32004  # nothing is waiting any more
+        answered = [
+            e for e in await engine.store.read(f"acme/{tid}") if e.type == "aaa.human.answered"
+        ]
+        assert len(answered) == 1 and answered[0].data["by"] == "amy"
+
+
+async def test_answering_over_a2a_needs_the_answer_scope_and_the_tasks_own_tenant():
+    env, engine = await make([ASK, FINAL])
+    async with (
+        engine,
+        env.client("key-acme") as run_only,
+        env.client("key-globex-answerer") as foreign,
+        env.client("key-acme-answerer") as answerer,
+    ):
+        tid, _ = await waiting_task(run_only, env)
+        denied = (
+            await run_only.post("/a2a", json=rpc("SendMessage", message("4", taskId=tid)))
+        ).json()
+        assert denied["error"]["code"] == -32004 and "answer" in denied["error"]["message"]
+        theirs = (
+            await foreign.post("/a2a", json=rpc("SendMessage", message("4", taskId=tid)))
+        ).json()
+        missing = (
+            await foreign.post("/a2a", json=rpc("SendMessage", message("4", taskId="nope")))
+        ).json()
+        assert theirs["error"]["code"] == missing["error"]["code"] == -32001
+        assert [
+            e for e in await engine.store.read(f"acme/{tid}") if e.type == "aaa.human.answered"
+        ] == []
+        ok = (await answerer.post("/a2a", json=rpc("SendMessage", message("4", taskId=tid)))).json()
+        assert "result" in ok

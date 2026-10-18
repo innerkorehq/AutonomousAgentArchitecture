@@ -92,7 +92,7 @@ model requests never leave. To show more or less, pass `event_view=` (a function
   [Agent2Agent](https://a2a-protocol.org) agent: the card at `/.well-known/agent-card.json` (public) and the JSON-RPC binding at `POST /a2a` (authenticated), targeting **A2A 1.0**:
   `SendMessage` (blocks until the task finishes, or returns the working task with `returnImmediately`), `SendStreamingMessage`, `SubscribeToTask`, `GetTask`, `ListTasks`, `CancelTask`.
   Tasks are runs: same admission, quota, budget and tenant scope as `POST /v1/runs`. A task that parks on a human approval is `TASK_STATE_INPUT_REQUIRED`; it is approved through the REST
-  endpoint by a principal with the `approve` scope. Text parts only; push notifications, the extended card, multi-turn tasks and the gRPC/REST bindings are not implemented. It is marked
+  endpoint by a principal with the `approve` scope. A task whose algorithm is [`AskHuman`](algorithms/multi-agent-human.md) and is waiting for a person is `TASK_STATE_INPUT_REQUIRED` too, with the question in the status message; the client answers by sending a message with that `taskId`, which needs the `answer` scope (a task id that is not waiting for an answer is `UnsupportedOperation`, a foreign or unknown one `TaskNotFound`). Text parts only; push notifications, the extended card, other multi-turn tasks and the gRPC/REST bindings are not implemented. It is marked
   experimental in the [stability policy](../policy/stability.md): the protocol is young, and this surface may change in a minor release.
 
 ## Limits

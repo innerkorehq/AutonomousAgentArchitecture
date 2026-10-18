@@ -3,11 +3,12 @@
 Targets **A2A 1.0**, the JSON-RPC binding (`SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`,
 `SubscribeToTask`) and an agent card at `/.well-known/agent-card.json`. The wire shapes were taken from the protocol's own
 generated types and checked against the official `a2a-sdk` client in the tests. Out of scope: push notifications, the extended
-card, multi-turn tasks (a message naming an existing task is refused), non-text parts, gRPC and REST bindings.
+card, non-text parts, gRPC and REST bindings. A message naming an existing task is accepted in one case only: the task is waiting for a person's answer.
 
 A2A tasks ARE runs: they go through the same authentication, tenant scope, admission and budget as `POST /v1/runs`, and the
 tenant comes only from the credential. A task that parks on a human approval is reported as `TASK_STATE_INPUT_REQUIRED`; the
-approval itself is given through the REST API by a principal with the `approve` scope."""
+approval itself is given through the REST API by a principal with the `approve` scope. A task whose algorithm (`AskHuman`) is waiting for a person's answer is also
+`TASK_STATE_INPUT_REQUIRED`, carrying the question; the client answers by sending a message with that `taskId`, which needs the `answer` scope."""
 
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from aaa.algos.human import HUMAN_ANSWERED, HUMAN_REQUESTED
 from aaa.core.ids import new_id
 from aaa.core.outcome import OutcomeKind
 from aaa.runtime.engine import RUN_COMPLETED, RUNMETA
@@ -32,7 +34,7 @@ from aaa.tools.handler import (
     FAILED,
 )
 
-from .auth import Principal
+from .auth import SCOPE_ANSWER, Principal
 
 if TYPE_CHECKING:
     from .app import ServerApp
@@ -51,8 +53,13 @@ MAX_TEXT = 100_000
 
 
 def _default_text(value: Any) -> str:
-    if isinstance(value, dict) and isinstance(value.get("text"), str):
-        return value["text"]
+    if isinstance(value, dict):
+        for key in (
+            "text",
+            "answer",
+        ):  # the result field of ToolLoop-style and answer-style algorithms
+            if isinstance(value.get(key), str):
+                return value[key]
     return value if isinstance(value, str) else json.dumps(value, default=str)
 
 
@@ -137,13 +144,29 @@ class A2AEndpoint:
                 settled.add(cid)
         return bool(asked - settled)
 
+    async def _pending_question(self, rid: str) -> tuple[str, str] | None:
+        """(question id, question) of the question a person has not yet answered, if any."""
+        asked: dict[str, str] = {}
+        for e in await self.app.engine.store.read(rid):
+            if e.type == HUMAN_REQUESTED:
+                asked[str(e.data.get("question_id"))] = str(e.data.get("question", ""))
+            elif e.type == HUMAN_ANSWERED:
+                asked.pop(str(e.data.get("question_id")), None)
+        return next(iter(asked.items()), None)
+
     async def task(self, p: Principal, rid: str, *, artifacts: bool = True) -> dict[str, Any]:
         tid = self.app._public(p, rid)
         meta = await self.app.engine.project(RUNMETA, rid)
         done, message = meta.completed, None
         if done is None:
+            question = await self._pending_question(rid)
             if await self._pending_approval(rid):
                 state, message = "TASK_STATE_INPUT_REQUIRED", "waiting for a human approval"
+            elif question is not None:
+                state, message = (
+                    "TASK_STATE_INPUT_REQUIRED",
+                    f"waiting for an answer: {question[1]}",
+                )
             else:
                 state = "TASK_STATE_WORKING"
         else:
@@ -188,11 +211,11 @@ class A2AEndpoint:
         return h
 
     # -- methods ----------------------------------------------------------------------------
-    def _text_of(self, params: dict[str, Any]) -> str:
+    def _text_of(self, params: dict[str, Any], *, follow_up: bool = False) -> str:
         msg = params.get("message")
         if not isinstance(msg, dict) or msg.get("role") not in (None, "ROLE_USER"):
             raise RpcError(INVALID_PARAMS, "message with role ROLE_USER is required")
-        if msg.get("taskId"):
+        if msg.get("taskId") and not follow_up:
             raise RpcError(UNSUPPORTED_OP, "continuing an existing task is not supported")
         parts = msg.get("parts")
         if not isinstance(parts, list) or not parts:
@@ -207,7 +230,31 @@ class A2AEndpoint:
             raise RpcError(INVALID_PARAMS, "message is too long")
         return text
 
+    async def _answer(self, p: Principal, params: dict[str, Any]) -> str:
+        """A message that names an existing task: accepted only as the answer to the question the task is waiting on. Returns the run id."""
+        task_id = params["message"]["taskId"]
+        h = await self._owned(p, {"id": task_id})
+        question = (
+            None
+            if (await self.app.engine.project(RUNMETA, h.run_id)).completed
+            else await self._pending_question(h.run_id)
+        )
+        if question is None:
+            raise RpcError(UNSUPPORTED_OP, "this task is not waiting for an answer from you")
+        if not p.can(SCOPE_ANSWER):
+            raise RpcError(UNSUPPORTED_OP, "answering a task's question needs the 'answer' scope")
+        text = self._text_of(params, follow_up=True)
+        await h.signal(
+            HUMAN_ANSWERED, {"question_id": question[0], "answer": text[:2000], "by": p.subject}
+        )
+        return h.run_id
+
     async def send(self, p: Principal, params: dict[str, Any]) -> dict[str, Any]:
+        msg = params.get("message")
+        if isinstance(msg, dict) and msg.get("taskId"):
+            rid = await self._answer(p, params)
+            await asyncio.sleep(0)  # let the run take the answer before the task is described
+            return {"task": await self.task(p, rid)}
         text = self._text_of(params)
         rid, _ = await self.app.launch(p, self.algo, self.cfg.to_input(text))
         cfgd = params.get("configuration") or {}
@@ -329,8 +376,12 @@ class A2AEndpoint:
         from contextlib import AsyncExitStack
 
         if method == "SendStreamingMessage":
-            text = self._text_of(params)
-            rid, _ = await self.app.launch(p, self.algo, self.cfg.to_input(text))
+            msg = params.get("message")
+            if isinstance(msg, dict) and msg.get("taskId"):
+                rid = await self._answer(p, params)
+            else:
+                text = self._text_of(params)
+                rid, _ = await self.app.launch(p, self.algo, self.cfg.to_input(text))
         else:
             h = await self._owned(p, params)
             rid = h.run_id
