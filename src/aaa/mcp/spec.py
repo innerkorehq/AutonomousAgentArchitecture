@@ -568,6 +568,27 @@ class MCPSpec(_M):
         """Whether serving this spec starts a subprocess (a stdio upstream): see `AAA_MCP_ALLOW_SUBPROCESS`."""
         return any(isinstance(s, McpSource) and s.transport == "stdio" for s in self.sources)
 
+    def code_refs(self) -> frozenset[str]:
+        """Everything in this spec that makes the server run code: modules and objects it imports, algorithms and engines it builds, and the commands it launches.
+        A hot reload may only use references that were already in use when the server started (see `aaa.mcp.reload`)."""
+        refs: set[str] = set()
+        for s in self.sources:
+            if s.type == "objects":
+                refs.add(f"object:{s.ref}")
+            elif s.type == "module":
+                refs.add(f"module:{s.module}@{s.path or ''}")
+            elif isinstance(s, McpSource) and s.transport == "stdio":
+                refs.add("exec:" + " ".join([s.command or "", *s.args]) + f"@{s.cwd or ''}")
+        refs |= {f"algorithm:{a.algorithm}" for a in self.agents if ":" in a.algorithm}
+        refs |= {
+            f"resource:{r.ref}"
+            for r in self.resources
+            if isinstance(r, IndexResource | MemoryResource) and ":" in r.ref
+        }
+        if self.runtime.engine is not None:
+            refs.add(f"engine:{self.runtime.engine}")
+        return frozenset(refs)
+
     def imports_code(self) -> bool:
         """Whether compiling this spec imports modules (and so runs code): see the kill-switch in `aaa.mcp.compile`."""
         return (

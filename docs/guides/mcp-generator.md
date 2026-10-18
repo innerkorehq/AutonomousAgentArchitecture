@@ -500,6 +500,34 @@ aaa mcp serve myapp.tools:build                           # the older form: a fa
 
 Flags: `--source`, `--include`, `--exclude`, `--tag`, `--prefix`, `--name`, `--title`, `--instructions`, `--tenant`, `--user`, `--expose-approval-tools`, `--max-result-chars`, `--no-import-sources`. `serve` writes its messages to stderr, because stdout carries the protocol.
 
+## Reloading without a restart
+
+```bash
+aaa mcp serve --config server.toml --reload          # SIGHUP rebuilds the server
+aaa mcp serve --config server.toml --watch           # also when a configuration file changes (checked every 5 s; --watch 2 for 2 s)
+kill -HUP <pid>
+```
+
+The new server is built **completely** before it replaces the running one; if the files do not parse, the configuration is invalid, an upstream cannot be reached or anything else fails, the running server is left alone and the reason is printed to stderr (`aaa mcp: reload failed: ...`). A reload may change tools, policies, profiles, prompts, resources, OpenAPI documents and upstream connections. It will **not**:
+
+- **run anything new.** The new configuration may only refer to code that was already running at startup: no new module, object, algorithm, engine or launched command (`MCPSpec.code_refs()`). This is checked on the configuration *before* it is compiled, because compiling is what imports; a refused reload has run nothing. Removing code is fine, and so is reconfiguring the same code. The kill-switches and the file-permission check apply on every reload.
+- **change who the server is.** Name, title, version and instructions, and which capabilities exist (resources, prompts), are fixed at startup; a change is refused with "restart required". A configuration that builds its own engine (`runtime.engine`) cannot be reloaded.
+- **reload Python code.** A module that changed on disk keeps running as imported.
+
+Calls already running finish on the server they started on; its upstream connections close when they are done (or after 30 s). Reloads are rate-limited and one at a time, and with `--watch` a change must hold still for one more check before it is applied, so a half-written file is not read. Clients that cached the tool list see the new one the next time they list it (the list-changed notification is not sent).
+
+Programmatically, and for `aaa-server`:
+
+```python
+from aaa.mcp import ReloadableServer, acompile_spec, load_spec
+
+server = await ReloadableServer.start(lambda: load_spec("server.toml"), acompile_spec)
+cfg = ServerConfig(engine=engine, authenticator=..., mcp=server)     # POST /mcp serves whatever was loaded last
+loop.add_signal_handler(signal.SIGHUP, lambda: asyncio.ensure_future(server.reload()))
+```
+
+`await server.reload()` returns a `ReloadResult` (`applied`, `unchanged`, `refused`, `failed`, `skipped`) and never raises for a bad configuration.
+
 ## Over HTTP, behind aaa-server
 
 ```python

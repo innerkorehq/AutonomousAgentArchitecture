@@ -6,6 +6,7 @@ from aaa.mcp.client import MCPClient, MCPToolInfo, mcp_tool_name, render_content
 from aaa.mcp.compile import acompile_spec, compile_spec
 from aaa.mcp.config import load_spec
 from aaa.mcp.memory import mcp_memory
+from aaa.mcp.reload import ReloadableServer
 from aaa.mcp.server import MCPToolServer, serve_stdio
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "MCPServerBuilder",
     "MCPToolInfo",
     "MCPToolServer",
+    "ReloadableServer",
     "acompile_spec",
     "compile_spec",
     "load_spec",

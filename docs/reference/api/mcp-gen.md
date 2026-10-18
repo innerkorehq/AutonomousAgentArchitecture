@@ -53,3 +53,5 @@ See [Generating an MCP server](../../guides/mcp-generator.md).
 ::: aaa.mcp.include.compose
 
 ::: aaa.mcp.clientconfig.build
+
+::: aaa.mcp.reload.ReloadableServer

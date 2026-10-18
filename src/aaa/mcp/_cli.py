@@ -137,6 +137,19 @@ def add_arguments(mc: argparse._SubParsersAction[argparse.ArgumentParser]) -> No
 
     sv = mc.add_parser("serve", help="serve tools over MCP stdio")
     sv.add_argument(
+        "--reload",
+        action="store_true",
+        help="reload the configuration on SIGHUP (a failed or unsafe reload leaves the running server alone)",
+    )
+    sv.add_argument(
+        "--watch",
+        nargs="?",
+        const=5.0,
+        type=float,
+        metavar="SECONDS",
+        help="also reload when the configuration files change (checked every SECONDS, default 5); implies --reload",
+    )
+    sv.add_argument(
         "factory",
         nargs="?",
         help="older form: module:function returning a ToolRegistry or MCPToolServer",
@@ -425,6 +438,8 @@ async def run(a: argparse.Namespace) -> int:
         return 0
     for line in core.report:  # stderr: stdout is the protocol
         print(f"aaa mcp: {line}", file=sys.stderr)
+    if a.sub == "serve" and (a.reload or a.watch):
+        return await _serve_reloadable(a, core)
     if core.owns_engine and core.engine is not None:
         async with (
             core.engine
@@ -432,6 +447,60 @@ async def run(a: argparse.Namespace) -> int:
             await serve_stdio(core)
     else:
         await serve_stdio(core)
+    return 0
+
+
+async def _serve_reloadable(a: argparse.Namespace, first: Any) -> int:
+    """Serve with hot reload: SIGHUP (and, with --watch, a change to the configuration files) rebuilds the server; see `aaa.mcp.reload` for what is refused."""
+    import signal
+
+    from aaa.mcp.compile import acompile_spec
+    from aaa.mcp.include import compose, overlays_from_env
+    from aaa.mcp.reload import ReloadableServer, ReloadResult, watch
+    from aaa.mcp.server import serve_stdio
+
+    def read() -> Any:
+        return load_spec(a.config, overlay=overlay_of(a), overlays=a.overlay or ())
+
+    async def compile_(spec: Any) -> Any:
+        return await acompile_spec(
+            spec,
+            allow_import=False if a.no_import_sources else None,
+            allow_subprocess=False if a.no_subprocess_sources else None,
+        )
+
+    def say(r: ReloadResult) -> None:
+        print(f"aaa mcp: reload {r.status}: {r.reason}", file=sys.stderr)
+
+    server = ReloadableServer(first, read, compile_)
+    loop = asyncio.get_running_loop()
+
+    def on_hup() -> None:
+        async def go() -> None:
+            say(await server.reload())
+
+        loop.create_task(go())
+
+    if hasattr(signal, "SIGHUP"):
+        loop.add_signal_handler(signal.SIGHUP, on_hup)
+    watcher = None
+    if a.watch:
+        watcher = asyncio.create_task(
+            watch(
+                server,
+                lambda: (
+                    compose(a.config, [*overlays_from_env(os.environ), *(a.overlay or [])]).files
+                ),
+                interval_s=a.watch,
+                on_result=say,
+            )
+        )
+    try:
+        await serve_stdio(server)
+    finally:
+        if watcher is not None:
+            watcher.cancel()
+        await server.aclose()
     return 0
 
 
