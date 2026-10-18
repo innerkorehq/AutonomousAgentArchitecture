@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Docs: [threat model for the additional algorithms](../security/algorithms.md) (written ahead of the code) and a pre-ship checklist for custom algorithms.
+
 ## 0.4.0 (2026-10-18)
 
 **Generated MCP servers** (see [the guide](../guides/mcp-generator.md) and [threat model](../security/mcp-generator.md))

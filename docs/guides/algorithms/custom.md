@@ -79,6 +79,16 @@ second = llm_request(e, LLMRequest(messages=[tool_result_message]), prev=state.r
 Store `request_id` (the id of the last `main` request) in your projection instead of the transcript. The `LLMHandler` reconstructs
 the full conversation for the provider. This keeps log size and state linear in the number of turns.
 
+## A checklist before you ship an algorithm
+
+- **Bound every loop** at construction (validate arguments, expose `max_calls`) and test the bound at its edge.
+- **Order-independence:** run it with a client that completes parallel calls in a random order (three seeds) and assert the same outcome.
+- **Replay:** re-fold the stored events and assert the projected state equals the live state.
+- **Budget:** run with a tiny `Budget` and assert a prompt, partial outcome rather than a hang.
+- **Data is not instruction:** put "ignore previous instructions" in every channel the algorithm reads (retrieval, tools, memory, human answers) and assert nothing it controls changes.
+- **No I/O or clocks in `on_event`**, no unseeded randomness.
+- Register an offline example and add the algorithm to the [choosing guide](index.md).
+
 ## Testing it
 
 Use `FakeLLMClient` with a function of the request, and assert on the outcome and the event list. See [Testing your agents](../testing.md).

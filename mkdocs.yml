@@ -154,6 +154,7 @@ nav:
       - Multimodal threat model: security/multimodal.md
       - Tools and sandbox threat model: security/tools.md
       - MCP generator threat model: security/mcp-generator.md
+      - Algorithms threat model: security/algorithms.md
       - Status and limitations: about/limitations.md
       - Stability and deprecation: policy/stability.md
       - Design decisions: about/design-decisions.md
