@@ -23,8 +23,8 @@ jobs:
     outputs:
       already_published: ${{ steps.exists.outputs.published }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Tag matches the package version
         if: github.event_name == 'release'
         run: |
@@ -50,7 +50,7 @@ jobs:
           uv pip install --python /tmp/smoke/bin/python dist/*.whl
           /tmp/smoke/bin/python -I examples/quickstart.py | grep -q "success - 17 x 23 = 391"
           /tmp/smoke/bin/python -I -c "import aaa; print('aaa', aaa.__version__)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -78,8 +78,8 @@ jobs:
       AAA_TEST_POSTGRES_URL: postgresql://postgres:aaa@localhost:5432/postgres
       AAA_TEST_REDIS_URL: redis://localhost:6379/0
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
@@ -96,7 +96,7 @@ jobs:
     permissions:
       id-token: write # required for Trusted Publishing
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -112,7 +112,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/

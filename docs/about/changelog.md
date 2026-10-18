@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- CI: GitHub Actions moved to their Node 24 releases (`checkout` 5, `setup-uv` 7, `upload-artifact` 7, `download-artifact` 8, `upload-pages-artifact` 5).
 - Fixed: parameters of a `@tool` function written as `Annotated[int, Field(ge=1, le=3)]` lost their constraints (the type hints were read without their metadata), so the schema the model saw and the validation applied had no range, pattern or length. They are kept now.
 - `jsonschema` is a required dependency: tool arguments and structured outputs are always validated against their full JSON Schema (ranges, enums, patterns, nested schemas). The weaker fallback that applied when it was not installed is gone, so there is no configuration in which validation is silently reduced.
 
