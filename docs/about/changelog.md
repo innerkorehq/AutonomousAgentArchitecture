@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-10-18)
 
 - New algorithms (programme A1): `SelfRefine`, `ChainOfVerification`, `BestOfN` (verifier: pure scorer, tool or model judge), `LeastToMost`, `SelfAsk` (optionally with a lookup tool), `GraphOfThoughts` (a validated graph of generate/aggregate/refine/score/keep_best operations) and `LATS` (UCT tree search with reflections). All are event-sourced, bounded at construction with a known `max_calls`, and independent of the order parallel calls finish in. `aaa.algos.base` gains the shared `Calls` projection and `ask`, `task_text`, `clamp_score`, `data_block` helpers (additive).
 - New algorithms (programme A2): `ReWOO` (plan every tool call up front with `#E1` placeholders, run them without the model, one solver call), `LLMCompiler` (the same checked plan plus a joiner that may replan, bounded by `max_replans`) and `HierarchicalAgent` (a manager delegates a validated sub-goal DAG to named workers as child runs, each under its own `Budget`, with `max_depth`). `PlanAndExecute(review_progress=True)` lets the planner revise the remaining steps after each finished step (additive; counts against `max_replans`; a review that fails or is unusable keeps the plan).

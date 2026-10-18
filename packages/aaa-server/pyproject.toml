@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.11"
-dependencies = ["autonomous-agent-architecture>=0.4.0", "starlette>=0.37", "uvicorn>=0.30"]
+dependencies = ["autonomous-agent-architecture>=0.5.0", "starlette>=0.37", "uvicorn>=0.30"]
 
 [project.optional-dependencies]
 jwt = ["pyjwt[crypto]>=2.8"]

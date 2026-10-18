@@ -1,6 +1,6 @@
 [project]
 name = "autonomous-agent-architecture"
-version = "0.4.0"
+version = "0.5.0"
 description = "AAA, Autonomous Agent Architecture: the architecture and runtime for autonomous agents. Build, orchestrate, execute, recover, manage."
 readme = "README.md"
 license = "MIT"
