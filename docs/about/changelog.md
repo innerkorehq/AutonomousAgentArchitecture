@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-10-19)
 
 - MCP generator, **hot reload**: `aaa mcp serve --reload` (SIGHUP) and `--watch [SECONDS]`; `aaa.mcp.ReloadableServer` for code and `aaa-server`. The new server is built completely first and swapped in only if it is sound; a reload may not refer to code that was not running at startup (checked before compiling), change the server's identity or capabilities, or use `runtime.engine`. Calls in flight finish on the old server. New `MCPSpec.code_refs()`.
 - MCP generator, **OAuth to upstreams**: `[sources.oauth]` on an HTTP upstream or an OpenAPI source (client-credentials grant): secret from an `env:` reference, token endpoint https with its host in `token_hosts` and fetched through the SSRF-safe fetcher, token cached, refreshed 30 s before expiry, replaced once after a 401, sent only to the upstream's host, never logged. Works on the 1.x and 2.x SDKs.
@@ -13,6 +13,14 @@
 - CI: GitHub Actions moved to their Node 24 releases (`checkout` 5, `setup-uv` 7, `upload-artifact` 7, `download-artifact` 8, `upload-pages-artifact` 5).
 - Fixed: parameters of a `@tool` function written as `Annotated[int, Field(ge=1, le=3)]` lost their constraints (the type hints were read without their metadata), so the schema the model saw and the validation applied had no range, pattern or length. They are kept now.
 - `jsonschema` is a required dependency: tool arguments and structured outputs are always validated against their full JSON Schema (ranges, enums, patterns, nested schemas). The weaker fallback that applied when it was not installed is gone, so there is no configuration in which validation is silently reduced.
+
+## aaa-server 0.3.0 (2026-10-19)
+
+Requires `autonomous-agent-architecture>=0.6.0`.
+
+- **A2A and `AskHuman`:** a task whose `AskHuman` run is waiting for a person is `TASK_STATE_INPUT_REQUIRED` with the question in the status message, and a message naming that `taskId` answers it (needs the `answer` scope; the task's own tenant; one outstanding question, once). A message naming an unknown task is now `TaskNotFound` (it was `UnsupportedOperation`); the default A2A result text now uses an `answer` field as well as `text`.
+- **Profiles:** API keys and tokens may carry `profile:<name>` scopes; `POST /mcp` applies them to tools, resources and prompts (the MCP generator's [profiles](../guides/mcp-generator.md)). A token's `profile:` scopes are kept, other unknown scopes are still dropped.
+- `POST /mcp` serves prompts that live on an upstream MCP server (it fills them asynchronously) and passes the caller's scopes to every list and read.
 
 ## 0.5.0 (2026-10-18)
 

@@ -16,7 +16,7 @@ members = [
 
 [[package]]
 name = "aaa-server"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "packages/aaa-server" }
 dependencies = [
     { name = "autonomous-agent-architecture" },
@@ -392,7 +392,7 @@ wheels = [
 
 [[package]]
 name = "autonomous-agent-architecture"
-version = "0.5.0"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
