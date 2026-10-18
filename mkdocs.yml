@@ -96,6 +96,7 @@ nav:
           - SelfConsistency and RAG: guides/algorithms/ensembles-rag.md
           - Reflexion, Debate, Swarm, Tree-of-thoughts: guides/algorithms/reasoning.md
           - Verification, decomposition and search: guides/algorithms/verify-search.md
+          - Plan-first and delegating algorithms: guides/algorithms/plan-first.md
           - Writing your own: guides/algorithms/custom.md
       - Persistence and recovery: guides/persistence.md
       - Running a cluster: guides/clusters.md

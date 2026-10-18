@@ -28,6 +28,10 @@ flowchart TD
     VF -->|Critique itself| SRF[SelfRefine]
     VF -->|Fact-check questions| COV[ChainOfVerification]
     VF -->|Score N samples| BON[BestOfN]
+    Q -->|Plan every tool call first| PF{Can it react?}
+    PF -->|No: cheapest| RW[ReWOO]
+    PF -->|Yes: a joiner may replan| LC[LLMCompiler]
+    Q -->|Specialist workers, each with a budget| HA[HierarchicalAgent]
     Q -->|Break the question down| DC{How?}
     DC -->|Easy sub-questions first| L2M[LeastToMost]
     DC -->|Ask follow-ups, maybe a tool| SA[SelfAsk]
@@ -41,7 +45,7 @@ flowchart TD
 |---|---|---|---|---|
 | [`ToolLoop`](tool-loop-react.md) | the model | 1 per turn | `max_turns`, `tool_names`, `system`, `stream` | `{"text", "turns"}` |
 | [`ReAct`](tool-loop-react.md) | the model (text protocol) | 1 per turn | same | `{"text", "turns"}` |
-| [`PlanAndExecute`](plan-and-execute.md) | model plans, code schedules | plan + per-step + synthesis | `executor`, `max_parallel`, `max_replans`, `synthesize` | `{"text", "results"}` |
+| [`PlanAndExecute`](plan-and-execute.md) | model plans, code schedules | plan + per-step + synthesis | `executor`, `max_parallel`, `max_replans`, `synthesize`, `review_progress` | `{"text", "results"}` |
 | [`Router`](router-supervisor.md) | rules, then optionally the model | 0 or 1 | `classifier`, `default`, routes | the chosen child's value |
 | [`Supervisor`](router-supervisor.md) | the model, via delegate tools | per turn + workers | `workers`, `extra_tools` | `{"text", "turns"}` |
 | [`GenerateTestRepair`](refine.md) | your validator | 1 per attempt | `validator`, `max_iterations` | `{"candidate", "iterations"}` |
@@ -53,6 +57,9 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`ReWOO`](plan-first.md) | a plan checked before it runs | 2 | `tool_names`, `max_steps`, `on_step_error` | `{"text", "plan", "evidence", "rounds"}` |
+| [`LLMCompiler`](plan-first.md) | a plan checked before it runs, then a joiner | `2 * (max_replans + 1)` | same, `max_replans` | `{"text", "plan", "evidence", "rounds"}` |
+| [`HierarchicalAgent`](plan-first.md) | a manager's validated sub-goal DAG | manager + workers | `workers`, `max_subgoals`, `max_depth`, `child_budget` | `{"text", "subgoals", "depth"}` |
 | [`SelfRefine`](verify-search.md) | the model critiques itself | `2 * rounds + 2` at most | `max_rounds` | `{"answer", "rounds", "stopped"}` |
 | [`ChainOfVerification`](verify-search.md) | independent check questions | `3 + max_questions` at most | `max_questions` | `{"answer", "draft", "checks", "revised"}` |
 | [`BestOfN`](verify-search.md) | a verifier (code, tool or model) | `n` (+ `n` judge calls) | `n`, `score`, `verifier_tool`, `threshold` | `{"answer", "score", "scores", "selected", "n", "early_stop"}` |

@@ -32,6 +32,12 @@
 
 ::: aaa.algos.LATS
 
+::: aaa.algos.ReWOO
+
+::: aaa.algos.LLMCompiler
+
+::: aaa.algos.HierarchicalAgent
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route

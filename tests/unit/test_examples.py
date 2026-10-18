@@ -128,6 +128,12 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "planning_algorithms.py": [
+        "rewoo: Paris has 2.1 million people. | evidence {'E1': 'Paris', 'E2': '2.1 million', 'E3': '4'} | model calls: 2",
+        "llm-compiler: Paris has 2.1 million people; 2 + 2 = 4. | rounds 2",
+        "manager: Report: Paris is the capital of France. | sub-goals ['research', 'write']",
+        "plan-and-execute with review: ['gather', 'r1-check']",
+    ],
     "verification_algorithms.py": [
         "self-refine: 42 km (units added) after 1 rewrite; accepted",
         "verification: The capital of Australia is Canberra. | draft was: The capital of Australia is Sydney.",

@@ -62,8 +62,10 @@ def _apply(st: _P, e: Event) -> _P:
             {s["id"]: _Step(description=s["description"], deps=s["depends_on"]) for s in d["steps"]}
         )
         st.replans, st.replanning = st.replans + 1, False
+    elif e.type == "aaa.plan.kept":  # a progress review that changed nothing (or could not be used)
+        st.replans, st.replanning = st.replans + 1, False
     elif e.type == "aaa.llm.requested":
-        st.replanning = st.replanning or d.get("tag") == "replan"
+        st.replanning = st.replanning or d.get("tag") in ("replan", "review")
         st.synth = st.synth or d.get("tag") == "synth"
     elif e.type == "aaa.task.started" and d["step_id"] in st.steps:
         st.steps[d["step_id"]].status = "running"
@@ -74,7 +76,7 @@ def _apply(st: _P, e: Event) -> _P:
     return st
 
 
-PLAN = Projection(_P, _apply, name="aaa.plan", version=1, state_type=_P)
+PLAN = Projection(_P, _apply, name="aaa.plan", version=2, state_type=_P)
 
 
 def _valid(steps: list[Step], known: set[str]) -> str | None:
@@ -114,6 +116,7 @@ class PlanAndExecute:
         max_replans: int = 1,
         synthesize: bool = True,
         planner_system: str = _PLAN_SYSTEM,
+        review_progress: bool = False,
     ) -> None:
         self.executor, self.model, self.max_parallel = executor, model, max_parallel
         self.max_replans, self.synthesize, self.planner_system = (
@@ -121,6 +124,7 @@ class PlanAndExecute:
             synthesize,
             planner_system,
         )
+        self.review_progress = review_progress  # after each finished step, let the planner revise what is left (counts against max_replans)
 
     def subscriptions(self) -> list[str]:
         return ["aaa.run.started", "aaa.llm.completed", "aaa.llm.failed", "aaa.child.completed"]
@@ -139,11 +143,15 @@ class PlanAndExecute:
         if e.type == "aaa.run.started":
             return [self._req(e, self.planner_system, f"Task: {st.input.get('task', '')}", "plan")]
         if e.type == "aaa.llm.failed":
+            if tag == "review":  # a review that could not be made leaves the plan as it is
+                return await self._keep(e, ctx)
             return [llm_failed(e)]
         if e.type == "aaa.llm.completed":
             text = LLMResponse.model_validate(e.data["response"]).message.content
             if tag in ("plan", "replan"):
                 return await self._accept_plan(e, ctx, st, text, revised=tag == "replan")
+            if tag == "review":
+                return await self._accept_plan(e, ctx, st, text, revised=True, soft=True)
             if tag == "synth":
                 return [
                     finish(e, OutcomeKind.SUCCESS, {"text": text, "results": self._results(st)})
@@ -164,6 +172,13 @@ class PlanAndExecute:
                         ]
                     )
                 return [self._req(e, self.planner_system, self._replan_prompt(st), "replan")]
+            if (
+                self.review_progress
+                and not st.replanning
+                and st.replans < self.max_replans
+                and any(s.status == "pending" for s in st.steps.values())
+            ):
+                return [self._req(e, self.planner_system, self._review_prompt(st), "review")]
             return await self._advance(e, ctx, st)
         return []
 
@@ -179,13 +194,29 @@ class PlanAndExecute:
             "Return ONLY the remaining steps needed (new ids; depends_on may reference completed ids)."
         )
 
+    def _review_prompt(self, st: _P) -> str:
+        done = {k: s.result for k, s in st.steps.items() if s.status == "done"}
+        left = {k: s.description for k, s in st.steps.items() if s.status == "pending"}
+        return (
+            f"Task: {st.input.get('task', '')}\nCompleted steps and results: {render_result(done)}\n"
+            f"Steps still planned: {render_result(left)}\n"
+            "Return the steps still needed, unchanged if the plan still holds or corrected in the light of the results "
+            "(new ids; depends_on may reference completed ids)."
+        )
+
+    async def _keep(self, e: Event, ctx: Ctx) -> list[Event]:
+        await ctx.engine.emit(e.caused("aaa.plan.kept", {}))
+        return await self._advance(e, ctx, await ctx.project(PLAN))
+
     async def _accept_plan(
-        self, e: Event, ctx: Ctx, st: _P, text: str | None, revised: bool
+        self, e: Event, ctx: Ctx, st: _P, text: str | None, revised: bool, soft: bool = False
     ) -> list[Event]:
         obj = parse_json_obj(text)
         try:
             plan = Plan.model_validate(obj)
         except ValidationError:
+            if soft:
+                return await self._keep(e, ctx)
             return [finish(e, OutcomeKind.FAILED, reason="planner returned an invalid plan")]
         known = (
             {k for k, s in st.steps.items() if s.status in ("done", "running")}
@@ -207,6 +238,8 @@ class PlanAndExecute:
                 ]
             )
         if why := _valid(plan.steps, known):
+            if soft:
+                return await self._keep(e, ctx)
             return [finish(e, OutcomeKind.FAILED, reason=f"invalid plan: {why}")]
         ev = e.caused(
             "aaa.plan.revised" if revised else "aaa.plan.created",

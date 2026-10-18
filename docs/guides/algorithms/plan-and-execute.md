@@ -79,3 +79,7 @@ Child runs have their own outcomes and their **spend rolls up** into the parent'
 For a task needing two or three tool calls in sequence, a `ToolLoop` is simpler and cheaper: planning and synthesis add
 two LLM calls. Choose `PlanAndExecute` when steps are independent and can run in parallel, are individually long, or when
 you want the plan itself as an auditable artifact.
+
+## Reviewing the plan as it goes
+
+`PlanAndExecute(..., review_progress=True)` also asks the planner, after each finished step, whether the remaining steps still hold. See [Plan-first and delegating algorithms](plan-first.md#planandexecutereview_progresstrue).
