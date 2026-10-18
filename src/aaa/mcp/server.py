@@ -140,6 +140,16 @@ class MCPToolServer:
             raise PromptError(f"unknown prompt {name!r}")
         return p.get(arguments)
 
+    async def aget_prompt(
+        self, name: str, arguments: Mapping[str, Any] | None = None
+    ) -> MCPPromptResult:
+        """Like `get_prompt`, for hosts that can wait: also fills prompts that live on another server (see `McpSource.prompts`)."""
+        p = self.prompts.get(name)
+        if p is None:
+            raise PromptError(f"unknown prompt {name!r}")
+        fetch = getattr(p, "aget", None)
+        return await fetch(arguments) if fetch is not None else p.get(arguments)
+
     # -- what is offered -------------------------------------------------------------------
     def _exposed(self, t: Tool) -> bool:
         return (not t.requires_approval) or self.approval is not None or self.expose_approval_tools
@@ -400,7 +410,7 @@ def build_server(core: MCPToolServer) -> Any:
 
             async def on_get_prompt(ctx: Any, params: Any) -> Any:
                 try:
-                    r = core.get_prompt(params.name, params.arguments)
+                    r = await core.aget_prompt(params.name, params.arguments)
                 except PromptError as e:
                     raise _protocol_error(-32602, str(e)) from None
                 return types.GetPromptResult.model_validate(wire.prompt_get_result(r))
@@ -475,7 +485,7 @@ def build_server(core: MCPToolServer) -> Any:
         @server.get_prompt()
         async def _get_prompt(name: str, arguments: dict[str, str] | None) -> Any:
             try:
-                r = core.get_prompt(name, arguments)
+                r = await core.aget_prompt(name, arguments)
             except PromptError as e:
                 raise ValueError(str(e)) from None
             return types.GetPromptResult.model_validate(wire.prompt_get_result(r))

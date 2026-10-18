@@ -21,9 +21,10 @@ from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from typing import Any
 
-from aaa.mcp.client import MCPClient, MCPToolInfo
+from aaa.mcp.client import MCPClient, MCPToolInfo, _attr
 from aaa.mcp.config import Secret, SpecError
 from aaa.mcp.model import MCPAnnotations
+from aaa.mcp.sources.mcp_passthrough import UpstreamPrompt, UpstreamResources, paged
 from aaa.mcp.spec import McpSource
 from aaa.tools.builtin.net import FetchBlocked, FetchPolicy, SafeFetcher
 from aaa.tools.tool import Tool
@@ -46,6 +47,8 @@ class Loaded:
     annotations: dict[str, MCPAnnotations] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     upstream: Upstream | None = None
+    resources: Any = None  # an UpstreamResources provider, if the source asked for resources
+    prompts: dict[str, Any] = field(default_factory=dict)  # exposed name -> UpstreamPrompt
 
 
 # -- the http guard ----------------------------------------------------------------------------
@@ -200,6 +203,8 @@ class Upstream:
         self.src, self._make = src, make
         self.client: MCPClient | None = None
         self.infos: list[MCPToolInfo] = []
+        self.resource_infos: list[Any] = []
+        self.prompt_infos: list[Any] = []
         self._ready: asyncio.Future[None] | None = None
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
@@ -220,6 +225,10 @@ class Upstream:
             async with self._make() as client:
                 self.client = client
                 self.infos = await client.list_tools()
+                if self.src.resources:
+                    self.resource_infos = await paged(client.session.list_resources, "resources")
+                if self.src.prompts:
+                    self.prompt_infos = await paged(client.session.list_prompts, "prompts")
                 self._ready.set_result(None)
                 await self._stop.wait()
         except BaseException as e:  # noqa: BLE001 - reported to start(), or logged if it happens later
@@ -313,4 +322,19 @@ async def start_upstream(src: McpSource) -> Loaded:
                 open_world=info.open_world,
             )
     out.notes.append(f"upstream {src.name!r}: {len(tools)} of {len(up.infos)} tool(s) taken")
+    if src.resources:
+        out.resources = UpstreamResources(src, up, up.resource_infos)
+        out.notes.append(
+            f"upstream {src.name!r}: {len(out.resources.items)} resource(s) re-exposed"
+        )
+    if src.prompts:
+        for info in up.prompt_infos:
+            remote = str(_attr(info, "name"))
+            if any(fnmatch.fnmatchcase(remote, p) for p in src.exclude) or not any(
+                fnmatch.fnmatchcase(remote, p) for p in src.include
+            ):
+                continue
+            exposed = (src.prefix + remote)[:64]
+            out.prompts[exposed] = UpstreamPrompt(src, up, info, exposed)
+        out.notes.append(f"upstream {src.name!r}: {len(out.prompts)} prompt(s) re-exposed")
     return out

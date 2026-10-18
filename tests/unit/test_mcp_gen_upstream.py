@@ -452,3 +452,153 @@ def test_the_command_line_can_refuse_subprocess_sources(tmp_path):
         check=False,
     )
     assert refused.returncode == 2 and "launching is disabled" in refused.stderr
+
+
+# ===================================================================== resources and prompts of an upstream
+async def test_nothing_of_an_upstream_but_its_tools_is_passed_on_unless_asked():
+    core = await build(stdio(approval="none"))
+    try:
+        assert core.list_resources() == [] and core.list_prompts() == []
+    finally:
+        await core.aclose()
+
+
+async def test_listed_text_resources_are_re_exposed_under_a_namespaced_uri_and_read_through():
+    from aaa.mcp.sources.resources import ResourceNotFound
+
+    core = await build(stdio(resources=True, approval="none"))
+    try:
+        listed = {r.name: r for r in core.list_resources()}
+        assert {"welcome", "readme", "huge"} <= set(listed)
+        assert all(r.uri.startswith("aaa://upstream/notes/") for r in listed.values())
+        assert core.list_resource_templates() == []  # the upstream's template is not passed on
+        welcome = await core.read_resource(listed["welcome"].uri)
+        assert (
+            welcome.text == "Welcome to the notes server" and welcome.uri == listed["welcome"].uri
+        )
+        readme = await core.read_resource(listed["readme"].uri)
+        assert readme.mime_type == "text/markdown" and "# Notes" in readme.text
+    finally:
+        await core.aclose()
+    # the upstream's own URI cannot be asked for, directly or by forging a token
+    from aaa.mcp.sources.mcp_passthrough import token_of
+
+    core = await build(stdio(resources=True, approval="none"))
+    try:
+        for uri in (
+            f"aaa://upstream/notes/{token_of('note://item/1')}",  # a real upstream URI that was never listed
+            f"aaa://upstream/notes/{token_of('file:///etc/passwd')}",
+            "aaa://upstream/notes/not-a-token!",
+            "aaa://upstream/other/anything",
+            f"aaa://upstream/notes/{token_of('note://welcome')}?x=1",
+            "note://welcome",
+        ):
+            with pytest.raises(ResourceNotFound):
+                await core.read_resource(uri)
+    finally:
+        await core.aclose()
+
+
+async def test_resource_size_exclusion_and_a_dead_upstream():
+    from aaa.mcp.sources.resources import ResourceNotFound
+
+    core = await build(
+        stdio(resources=True, approval="none", max_resource_bytes=1000, resource_exclude=["readme"])
+    )
+    try:
+        listed = {r.name: r for r in core.list_resources()}
+        assert "readme" not in listed
+        huge = await core.read_resource(listed["huge"].uri)
+        assert len(huge.text) < 1200 and "[truncated at 1000 bytes]" in huge.text
+        # the upstream goes away: a read is the same "not found" as any other failure
+        await core._upstreams[0].aclose()
+        with pytest.raises(ResourceNotFound):
+            await core.read_resource(listed["welcome"].uri)
+    finally:
+        await core.aclose()
+
+
+async def test_upstream_prompts_keep_text_validate_arguments_and_fail_generically():
+    from aaa.mcp.sources.prompts import PromptError
+
+    core = await build(stdio(prompts=True, approval="none", prefix="n_"))
+    try:
+        prompts = {p.name: p for p in core.list_prompts()}
+        assert set(prompts) == {"n_summarize", "n_review"}
+        assert {(a.name, a.required) for a in prompts["n_summarize"].arguments} == {
+            ("text", True),
+            ("style", False),
+        }
+        got = await core.aget_prompt("n_summarize", {"text": "the cat sat", "style": "long"})
+        assert got.messages == (("user", "Summarize in a long style: the cat sat"),)
+        with pytest.raises(PromptError, match="unknown argument"):
+            await core.aget_prompt("n_summarize", {"text": "x", "evil": "y"})
+        with pytest.raises(PromptError, match="missing required"):
+            await core.aget_prompt("n_review", {})
+        with pytest.raises(PromptError, match="unknown prompt"):
+            await core.aget_prompt("summarize", {})  # the unprefixed name is not offered
+        with pytest.raises(PromptError, match="asynchronously"):
+            core.get_prompt("n_summarize", {"text": "x"})
+        big = await core.aget_prompt("n_review", {"code": "c" * 50_000})
+        assert len(big.messages[0][1]) <= 20_000
+        await core._upstreams[0].aclose()
+        with pytest.raises(PromptError, match="not available"):
+            await core.aget_prompt("n_review", {"code": "x"})
+    finally:
+        await core.aclose()
+
+
+async def test_prompt_name_clashes_are_refused_and_exclusions_apply():
+    with pytest.raises(SpecError, match="defined here and offered by an upstream"):
+        await build(
+            stdio(prompts=True, approval="none"),
+            prompts=[{"name": "review", "messages": [{"text": "mine"}]}],
+        )
+    with pytest.raises(SpecError, match="offered by two upstream sources"):
+        await build(
+            stdio(prompts=True, approval="none"), stdio("other", prompts=True, approval="none")
+        )
+    core = await build(stdio(prompts=True, approval="none", exclude=["review"]))
+    try:
+        assert [p.name for p in core.list_prompts()] == ["summarize"]
+    finally:
+        await core.aclose()
+
+
+async def test_upstream_prompts_are_served_over_the_http_handler_too():
+    from aaa_server.mcp_http import handle
+
+    core = await build(stdio(prompts=True, resources=True, approval="none"))
+    try:
+        r = await handle(
+            core,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "prompts/get",
+                "params": {"name": "review", "arguments": {"code": "x = 1"}},
+            },
+            tenant="acme",
+            user="ann",
+        )
+        assert r["result"]["messages"][0]["content"]["text"] == "Review this:\nx = 1"
+        listed = await handle(
+            core, {"jsonrpc": "2.0", "id": 2, "method": "resources/list"}, tenant="acme", user="ann"
+        )
+        assert any(
+            x["uri"].startswith("aaa://upstream/notes/") for x in listed["result"]["resources"]
+        )
+        bad = await handle(
+            core,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "prompts/get",
+                "params": {"name": "review", "arguments": {}},
+            },
+            tenant="acme",
+            user="ann",
+        )
+        assert "error" in bad
+    finally:
+        await core.aclose()

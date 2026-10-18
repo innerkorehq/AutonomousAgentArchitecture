@@ -98,6 +98,28 @@ optional = true                # if it is down at startup: say so and carry on w
 - **Lifecycle.** Connections are opened at startup (a failure is an error, or a note when `optional`) and the tool list is read once: restart to pick up upstream changes. A dead upstream gives a short generic tool error while the rest of the server keeps serving. `await core.aclose()` (or `async with core:`) disconnects and stops launched processes; `aaa mcp serve` does it for you, and a failed compile closes whatever it had already opened.
 - **One connection serves every caller, so an upstream is not tenant-isolated**, and tenant and user are never forwarded to it. Use an upstream only if it is safe to share.
 
+### Its resources and prompts
+
+Tools are the default. Add `resources = true` and/or `prompts = true` to the source to re-expose those too:
+
+```toml
+[[sources]]
+type = "mcp"
+name = "notes"
+transport = "stdio"
+command = "uvx"
+args = ["mcp-server-notes"]
+resources = true                  # text resources, listed once at startup
+resource_exclude = ["*secret*"]   # globs on a resource's name or URI
+max_resource_bytes = 200000
+prompts = true                    # prefix and include/exclude apply to prompt names too
+prefix = "notes_"
+```
+
+- A resource appears as `aaa://upstream/notes/<token>`. A read is accepted **only for a URI the upstream listed**: a caller cannot ask for any other URI, and the upstream's resource *templates* are not passed on. Only text is passed (binary resources are left out), cut to `max_resource_bytes`; any failure is the uniform `resource not found`.
+- A prompt keeps only its text messages (user and assistant), at most 20 of at most 20 000 characters each; only the arguments the upstream declared are accepted (values cut at 2 000 characters); names and descriptions are capped (`description_overrides` can replace a description). If the upstream cannot fill it, the caller gets a generic message. Two sources offering the same prompt name, or a prompt that clashes with one in your configuration, is a startup error.
+- Both are the upstream's words and reach your callers' models: untrusted content, like tool results. The lists are read once at startup. Over HTTP, `aaa-server` serves them through `resources/*` and `prompts/*`.
+
 ## OpenAPI documents as tools
 
 ```toml

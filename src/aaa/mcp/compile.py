@@ -111,11 +111,13 @@ def _rules(spec: MCPSpec, names: list[str]) -> dict[str, ToolRule]:
     return out
 
 
-async def _resources(spec: MCPSpec, live: Mapping[str, Any] | None) -> ResourceSet | None:
-    if not spec.resources:
+async def _resources(
+    spec: MCPSpec, live: Mapping[str, Any] | None, extra: list[Any] | None = None
+) -> ResourceSet | None:
+    if not spec.resources and not extra:
         return None
     lim = spec.limits
-    providers: list[Any] = []
+    providers: list[Any] = [*(extra or [])]
     for r in spec.resources:
         if r.type == "static":
             providers.append(
@@ -300,12 +302,22 @@ async def _compile(
                     _annotations(ag.annotations),
                 )
             )
+    upstream_providers: list[Any] = []
+    upstream_prompts: dict[str, Any] = {}
     for src in spec.sources:
         if src.type == "mcp":
             up = await start_upstream(src)
             notes += up.notes
             if up.upstream is not None:
                 holders.append(up.upstream)
+            if up.resources is not None:
+                upstream_providers.append(up.resources)
+            for pname, pdef in up.prompts.items():
+                if pname in upstream_prompts:
+                    raise SpecError(
+                        f"prompts: {pname!r} is offered by two upstream sources; give one a prefix"
+                    )
+                upstream_prompts[pname] = pdef
             for t in up.tools:
                 entries.append(
                     Entry(
@@ -383,10 +395,15 @@ async def _compile(
         )
     registry = ToolRegistry([e.tool for e in final])
     rules = _rules(spec, [e.tool.name for e in final])
-    resources = await _resources(spec, live)
-    prompts = {p.name: PromptDef(p) for p in spec.prompts}
+    resources = await _resources(spec, live, upstream_providers)
+    prompts: dict[str, Any] = {p.name: PromptDef(p) for p in spec.prompts}
     if len(prompts) != len(spec.prompts):
         raise SpecError("prompts: two prompts share a name")
+    if clash := sorted(set(prompts) & set(upstream_prompts)):
+        raise SpecError(
+            f"prompts: {clash} are defined here and offered by an upstream source; rename one"
+        )
+    prompts |= upstream_prompts
     core = CompiledServer(
         registry,
         name=spec.server.name,

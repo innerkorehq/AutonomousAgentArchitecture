@@ -402,6 +402,13 @@ class McpSource(_Source):
     optional: bool = (
         False  # if the upstream is down at startup: report it and carry on without its tools
     )
+    resources: bool = (
+        False  # also re-expose the upstream's (text) resources, under aaa://upstream/<name>/...
+    )
+    prompts: bool = False  # also re-expose the upstream's prompts (text messages only)
+    resource_exclude: list[str] = Field(default_factory=list)  # globs on a resource's name or URI
+    max_resource_bytes: int = Field(default=200_000, ge=1_000, le=2_000_000)
+    max_listed: int = Field(default=100, ge=1, le=500)  # resources taken from the upstream
 
     @model_validator(mode="after")
     def _check(self) -> McpSource:

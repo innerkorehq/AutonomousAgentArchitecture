@@ -64,7 +64,7 @@ def parse_uri(uri: str) -> tuple[str, str, str, dict[str, str]]:
     if (
         len(parts) < 2
         or not _SLUG.match(parts[1])
-        or kind not in ("static", "files", "index", "memory")
+        or kind not in ("static", "files", "index", "memory", "upstream")
     ):
         raise ResourceNotFound
     q = {k: v[0] for k, v in parse_qs(u.query, keep_blank_values=False, max_num_fields=4).items()}

@@ -92,7 +92,7 @@ async def handle(
                     id_, INVALID_PARAMS, "prompts/get needs a name and an arguments object"
                 )
             try:
-                r = core.get_prompt(name, args)
+                r = await core.aget_prompt(name, args)
             except PromptError as e:
                 return _error(id_, INVALID_PARAMS, str(e))
             return {"jsonrpc": "2.0", "id": id_, "result": wire.prompt_get_result(r)}
