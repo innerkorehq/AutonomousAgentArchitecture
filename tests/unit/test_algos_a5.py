@@ -7,7 +7,19 @@ import random
 import pytest
 from pydantic import BaseModel
 
-from aaa.algos import AskHuman, Auction, Blackboard, MixtureOfAgents, Role, RolePlaySOP, ToolLoop
+from aaa.algos import (
+    AskHuman,
+    Auction,
+    Blackboard,
+    Expert,
+    MixtureOfAgents,
+    Role,
+    RolePlaySOP,
+    ToolLoop,
+    after,
+    empty_board,
+    mentions,
+)
 from aaa.algos.base import finish
 from aaa.core import OutcomeKind
 from aaa.llm import FakeLLMClient, LLMHandler
@@ -538,3 +550,91 @@ async def test_ask_human_bounds_failures_and_order_independence():
     assert out.value == {"answer": "no question needed", "questions": [], "asked": 0}
     out, _ = await run(AskHuman(), FakeLLMClient(lambda r: text("a plain reply")))
     assert out.value["answer"] == "a plain reply"
+
+
+# ===================================================================== Blackboard: knowledge sources triggered by the board
+def triggered_script(order=()):
+    picks = iter(order)
+
+    def script(req):
+        s = sys_of(req)
+        if "You chair a group" in s:
+            return text(json.dumps({"next": next(picks, "done")}))
+        if "Write the final answer" in s:
+            return text("ANSWER")
+        who = s.split("You are the ")[1].split(":")[0]
+        return text(
+            {
+                "drafter": "Draft: ship it. TODO: check legal",
+                "legal": "Legal: fine",
+                "scribe": "Notes taken",
+            }[who]
+        )
+
+    return script
+
+
+def triggered_experts():
+    return {
+        "drafter": Expert("writes the draft.", when=empty_board(), auto=True),
+        "legal": Expert("checks legal issues.", when=mentions("todo: check legal"), auto=True),
+        "scribe": Expert("takes notes when asked.", when=after("legal")),
+    }
+
+
+async def test_an_automatic_expert_contributes_as_soon_as_the_board_calls_for_it_without_asking_the_chair():
+    llm = FakeLLMClient(triggered_script(["done"]))
+    out, _ = await run(Blackboard(triggered_experts()), llm)
+    assert [b["author"] for b in out.value["board"]] == [
+        "drafter",
+        "legal",
+    ]  # both ran on their triggers
+    chairs = [r for r in llm.requests if "You chair a group" in sys_of(r)]
+    assert len(chairs) == 1  # only asked once the automatic experts had nothing left to do
+    assert "scribe" in sys_of(chairs[0]) and "(triggered by the board)" in sys_of(chairs[0])
+    assert "drafter" not in sys_of(
+        chairs[0]
+    )  # it already wrote on this board state and the board is not empty any more
+
+
+async def test_the_chair_can_only_pick_experts_whose_trigger_holds_now():
+    experts = triggered_experts()
+    out, _ = await run(Blackboard(experts), FakeLLMClient(triggered_script(["scribe", "done"])))
+    assert [b["author"] for b in out.value["board"]] == ["drafter", "legal", "scribe"]
+    experts = {
+        "a": Expert("never ready", when=lambda board: False),
+        "b": Expert("ready", when=empty_board()),
+    }
+    llm = FakeLLMClient(
+        lambda r: text(json.dumps({"next": "a"})) if "You chair" in sys_of(r) else text("x")
+    )
+    out, _ = await run(Blackboard(experts), llm)
+    assert (
+        out.kind is OutcomeKind.FAILED
+    )  # the chair named an expert that was not eligible, so nobody wrote anything
+    chair = next(r for r in llm.requests if "You chair" in sys_of(r))
+    assert "- a:" not in sys_of(chair) and "- b:" in sys_of(chair)
+
+
+async def test_triggers_are_bounded_pure_and_cannot_loop():
+    experts = {"echo": Expert("repeats.", when=lambda board: True, auto=True)}
+    llm = FakeLLMClient(
+        lambda r: text("again") if "You are the echo" in sys_of(r) else text("ANSWER")
+    )
+    out, _ = await run(Blackboard(experts, max_rounds=5), llm)
+    assert (
+        out.value["rounds"] == 1 and len(out.value["board"]) == 1
+    )  # the board changed once and then the same expert is not triggered again... until it changes
+    forever = {"echo": Expert("repeats.", when=lambda board: True, auto=True, repeat=True)}
+    out, _ = await run(Blackboard(forever, max_rounds=3), llm)
+    assert (
+        out.value["rounds"] == 3 and len(out.value["board"]) == 3
+    )  # allowed to repeat, still capped
+    boom = {"x": Expert("breaks.", when=lambda board: 1 / 0, auto=True), "y": Expert("fine.")}
+    out, _ = await run(Blackboard(boom), FakeLLMClient(board_script(["y", "done"])))
+    assert [b["author"] for b in out.value["board"]] == [
+        "y"
+    ]  # a trigger that raises is simply not triggered
+    with pytest.raises(ValueError, match="no trigger"):
+        Blackboard({"a": Expert("x", auto=True)})
+    assert Blackboard({"a": "plain"}).experts == {"a": "plain"}  # strings still work

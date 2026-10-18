@@ -13,7 +13,7 @@ from aaa.algos.lats import LATS
 from aaa.algos.loops import LLMLoop, ReAct, RecallConfig, ToolLoop
 from aaa.algos.market import Auction
 from aaa.algos.memgpt import SelfManagedMemory, self_memory_tools
-from aaa.algos.moa import Blackboard, MixtureOfAgents
+from aaa.algos.moa import Blackboard, Expert, MixtureOfAgents, after, empty_board, mentions
 from aaa.algos.plan import Plan, PlanAndExecute, Step
 from aaa.algos.rag2 import AdaptiveRAG, CorrectiveRAG, SelfRAG
 from aaa.algos.refine import GenerateTestRepair, GeneratorCritic
@@ -42,6 +42,7 @@ __all__ = [
     "ComputerUse",
     "CorrectiveRAG",
     "Debate",
+    "Expert",
     "GenerateTestRepair",
     "GeneratorCritic",
     "GraphOfThoughts",
@@ -80,6 +81,9 @@ __all__ = [
     "VoyagerAgent",
     "VoyagerCurriculum",
     "WorkflowGraph",
+    "after",
+    "empty_board",
+    "mentions",
     "rank_memories",
     "reflection_tools",
     "self_memory_tools",

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `Blackboard` knowledge sources: `Expert(description, when=..., auto=..., repeat=...)` with pure trigger functions of the board (`empty_board()`, `after(author)`, `mentions(word)`). An automatic expert contributes as soon as its trigger holds, without a chair call; otherwise the chair is shown only the experts whose triggers hold now. Plain `{"name": "description"}` experts behave as before.
 - Computer use, vision: `Observation` can carry a screenshot (`image`, `image_type`); with one, its fingerprint is the picture's digest, so `ComputerUse`'s stall rule stops on a screen that stopped changing. `ComputerUse(vision=True)` attaches the current screenshot to the prompt (quoted as untrusted); `BrowserEnvironment(screenshots=True)` takes them (JPEG, animations off, caret hidden).
 - Browser, DNS rebinding closed: `BrowserEnvironment` sends its traffic through a new `aaa.env.egress.EgressProxy` that resolves each name once, requires public addresses and connects to the address it checked; redirects, scripts, frames and WebSockets are held to the allow-list because they all pass through it. `pin_dns=False` keeps the older in-page checks. Also fixed: a click that started a navigation could make the next observation fail with "Execution context was destroyed".
 - CI: GitHub Actions moved to their Node 24 releases (`checkout` 5, `setup-uv` 7, `upload-artifact` 7, `download-artifact` 8, `upload-pages-artifact` 5).

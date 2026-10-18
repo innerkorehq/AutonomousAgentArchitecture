@@ -21,7 +21,22 @@ human: Table booked for 4. | asked 1
 
 ## Blackboard
 
-`Blackboard(experts={"name": "what they do"}, max_rounds=6)`. A **chair** reads the board and names who should contribute next (or `done`); that expert adds one contribution (capped at `max_entry_chars`); finally a solver writes the answer from the board. The chair can only pick among the experts you listed, an unknown name ends the session, and a failed expert call is skipped. Result `{"answer", "board", "rounds"}`; `2 * max_rounds + 1` calls. (Experts are chosen by the chair; there are no automatic triggers on board contents.)
+`Blackboard(experts={"name": "what they do"}, max_rounds=6)`. A **chair** reads the board and names who should contribute next (or `done`); that expert adds one contribution (capped at `max_entry_chars`); finally a solver writes the answer from the board. The chair can only pick among the experts you listed, an unknown name ends the session, and a failed expert call is skipped. Result `{"answer", "board", "rounds"}`; `2 * max_rounds + 1` calls.
+
+**Knowledge sources.** An expert can be an `Expert(description, when=..., auto=..., repeat=...)`. `when` is a plain function of the board (a list of `(author, text)`; no I/O, an exception counts as "not triggered"); ready-made ones are `empty_board()`, `after(author)` and `mentions(word, by=None)`.
+
+```python
+Blackboard({
+    "drafter": Expert("writes the draft.", when=empty_board(), auto=True),
+    "legal": Expert("checks legal issues.", when=mentions("legal review"), auto=True),
+    "scribe": Expert("takes notes when asked.", when=after("legal")),
+    "editor": "polishes the final text.",                 # no trigger: the chair may pick it any time
+})
+```
+
+- With `auto=True` the expert contributes **as soon as its trigger holds**, without the chair being asked (the first such expert in the order given, if several are ready). The chair is consulted only when no automatic expert is ready, so a reactive board needs fewer model calls.
+- Without `auto`, `when` limits *when the chair may pick* the expert: the chair is shown only the experts that are eligible right now, and naming any other ends the session.
+- A triggered expert contributes **once per session** unless `repeat=True`, which lets it fire again after each change of the board (never twice on the same board). Rounds are always capped by `max_rounds`, so triggers cannot loop.
 
 ## Auction
 
