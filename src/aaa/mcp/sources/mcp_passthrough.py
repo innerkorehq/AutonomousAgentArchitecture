@@ -68,7 +68,7 @@ async def paged(call: Any, field: str) -> list[Any]:
         elif takes_cursor:
             res = await call(cursor=cursor)
         else:
-            from mcp.types import PaginatedRequestParams
+            from mcp.types import PaginatedRequestParams  # pyright: ignore[reportMissingImports]
 
             res = await call(params=PaginatedRequestParams(cursor=cursor))
         out += list(_attr(res, field, default=[]))

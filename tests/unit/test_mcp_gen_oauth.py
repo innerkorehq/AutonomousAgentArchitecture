@@ -81,6 +81,7 @@ class AuthServer:
 
 @pytest.fixture
 async def stack():
+    pytest.importorskip("mcp")  # the upstream here is a real MCP server
     import uvicorn
 
     from helpers.mcp_server import build as build_notes
