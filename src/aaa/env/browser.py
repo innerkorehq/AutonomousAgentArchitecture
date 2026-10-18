@@ -2,28 +2,29 @@
 
 The policy lives in code, not in the prompt:
 
-* **Hosts.** Every request the page makes (the page itself, every redirect hop, scripts, images, frames) is checked against `allowed_hosts` and **aborted** if the host is not
-  listed; only `http` and `https` (and `about:blank`) are allowed. Unless `allow_private_networks`, a host that resolves to a private, loopback or link-local address is
-  refused as well. (Checking at request time still leaves a DNS-rebinding gap between this check and the browser's own lookup; do not allowlist hosts you do not control.)
+* **Hosts and addresses.** All browser traffic goes through a local egress proxy (`aaa.env.egress`). For every connection it checks the host against `allowed_hosts`, resolves it **once**,
+  requires every address to be public (unless `allow_private_networks`), and connects to that same address, so DNS rebinding cannot swap in a private one. Redirects, scripts,
+  frames and WebSockets are held to the same rules because they are all connections through the proxy; only ports in `allowed_ports` (80 and 443, plus the start URL's) are reachable.
+  `pin_dns=False` drops the proxy and falls back to checking each request (and redirect hop) in the page: weaker, with a rebinding gap, for setups that cannot use a local proxy.
 * **A clean browser.** A fresh context for every environment: no cookies, no stored logins, downloads off, service workers blocked, extra windows closed, dialogs dismissed.
 * **Actions.** `goto`, `scroll`, `back` and `read` have no side effects; `click` and `type` do, and run only through the approval tool (see `aaa.env.env_tools`).
   Typing into anything that looks like a **credential field** (a password input, or a field whose name, id, label or autocomplete suggests a password, token, code or card
   number) is **refused outright**, whatever the model says and whoever approves.
-* **What it shows is data.** The observation is the page's text and a numbered list of its controls. The model is told it is untrusted."""
+* **What it shows is data.** The observation is the page's text and a numbered list of its controls, and with `screenshots=True` a picture of the page (animations off, caret hidden, so an unchanged page gives identical bytes). The model is told it is untrusted."""
 
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
-import ipaddress
 import json
 import re
-import socket
 from collections.abc import Sequence
 from typing import Any, Self
 from urllib.parse import urljoin, urlparse
 
 from aaa.env import ActionRefused, ActionSpec, Observation
+from aaa.env.egress import EgressProxy, host_allowed, is_public, system_resolver
 
 MAX_HOPS = 6
 _SENSITIVE = re.compile(
@@ -44,29 +45,6 @@ _ELEMENTS_JS = """
   return out.slice(0, MAX);
 }
 """
-
-
-def host_allowed(host: str, patterns: Sequence[str]) -> bool:
-    """`example.com` matches only that host; `*.example.com` matches its subdomains (not the bare domain)."""
-    h = host.lower().rstrip(".")
-    for p in patterns:
-        p = p.lower()
-        if p == h or (p.startswith("*.") and h.endswith(p[1:]) and len(h) > len(p) - 1):
-            return True
-    return False
-
-
-async def _is_public(host: str) -> bool:
-    try:
-        ip = ipaddress.ip_address(host.strip("[]"))
-        return ip.is_global
-    except ValueError:
-        pass
-    try:
-        infos = await asyncio.to_thread(socket.getaddrinfo, host, None)
-    except OSError:
-        return False
-    return bool(infos) and all(ipaddress.ip_address(i[4][0]).is_global for i in infos)
 
 
 def looks_sensitive(attrs: dict[str, Any]) -> bool:
@@ -95,6 +73,11 @@ class BrowserEnvironment:
         max_text_chars: int = 4000,
         timeout_ms: int = 10_000,
         executable_path: str | None = None,
+        pin_dns: bool = True,
+        allowed_ports: Sequence[int] = (80, 443),
+        screenshots: bool = False,
+        screenshot_quality: int = 60,
+        max_image_bytes: int = 400_000,
     ) -> None:
         if not allowed_hosts:
             raise ValueError("allowed_hosts is required: name the hosts the browser may reach")
@@ -106,6 +89,13 @@ class BrowserEnvironment:
         self.executable_path = (
             executable_path  # a specific Chromium/Chrome binary instead of Playwright's own
         )
+        self.pin_dns, self.screenshots = pin_dns, screenshots
+        self.screenshot_quality, self.max_image_bytes = screenshot_quality, max_image_bytes
+        ports = {int(x) for x in allowed_ports}
+        if (start_port := urlparse(start_url).port) is not None:
+            ports.add(start_port)
+        self.allowed_ports: list[int] = sorted(ports)
+        self._proxy: EgressProxy | None = None
         self.blocked: list[
             str
         ] = []  # hosts the page tried to reach and was refused, for the operator
@@ -179,7 +169,13 @@ class BrowserEnvironment:
             and p.hostname
             and host_allowed(p.hostname, self.allowed_hosts)
         ):
-            return self.allow_private_networks or await _is_public(p.hostname)
+            if self.pin_dns or self.allow_private_networks:
+                return True  # with the egress proxy, the address check happens where the connection is made
+            try:
+                addresses = await system_resolver(p.hostname, p.port or 443)
+            except OSError:
+                return False
+            return bool(addresses) and all(is_public(a) for a in addresses)
         return False
 
     async def _refuse(self, route: Any, url: str) -> None:
@@ -195,8 +191,8 @@ class BrowserEnvironment:
         url = route.request.url
         if not await self._permitted(url):
             return await self._refuse(route, url)
-        if urlparse(url).scheme not in ("http", "https"):
-            return await route.continue_()
+        if self.pin_dns or urlparse(url).scheme not in ("http", "https"):
+            return await route.continue_()  # redirects, scripts and frames all go through the egress proxy, which holds them to the same rules
         response = await route.fetch(max_redirects=0)
         for _ in range(MAX_HOPS):
             location = response.headers.get("location")
@@ -223,9 +219,23 @@ class BrowserEnvironment:
                 'BrowserEnvironment needs Playwright: pip install "autonomous-agent-architecture[browser]" && playwright install chromium'
             ) from None
         self._pw = await async_playwright().start()
-        self._browser = await self._pw.chromium.launch(
-            headless=self.headless, executable_path=self.executable_path
-        )
+        launch: dict[str, Any] = {
+            "headless": self.headless,
+            "executable_path": self.executable_path,
+        }
+        if self.pin_dns:
+            self._proxy = EgressProxy(
+                self.allowed_hosts,
+                allow_private_networks=self.allow_private_networks,
+                allowed_ports=self.allowed_ports,
+            )
+            self._proxy.blocked = self.blocked
+            await self._proxy.start()
+            launch |= {
+                "proxy": {"server": self._proxy.url},
+                "args": ["--proxy-bypass-list=<-loopback>"],
+            }
+        self._browser = await self._pw.chromium.launch(**launch)
         self._ctx = await self._browser.new_context(
             accept_downloads=False, service_workers="block", viewport={"width": 1100, "height": 800}
         )
@@ -243,8 +253,11 @@ class BrowserEnvironment:
             if closer is not None:
                 with contextlib.suppress(Exception):  # closing a browser that already died is fine
                     await closer.close()
+        if self._proxy is not None:
+            await self._proxy.aclose()
         if self._pw is not None:
             await self._pw.stop()
+        self._proxy = None
         self._pw = self._browser = self._ctx = self._page = None
 
     async def __aenter__(self) -> Self:
@@ -254,24 +267,47 @@ class BrowserEnvironment:
         await self.aclose()
 
     # -- observing and acting ----------------------------------------------------------------
+    async def _read_page(self, page: Any) -> tuple[str, list[dict[str, Any]], str]:
+        text = await page.evaluate("() => document.body ? document.body.innerText : ''")
+        els = await page.evaluate(_ELEMENTS_JS.replace("MAX", str(self.max_elements)))
+        return text[: self.max_text], els, await page.title()
+
     async def _look(self) -> Observation:
         page = await self._start()
-        with contextlib.suppress(Exception):  # a slow page is still worth looking at
-            await page.wait_for_load_state("domcontentloaded", timeout=self.timeout_ms)
-        text = (await page.evaluate("() => document.body ? document.body.innerText : ''"))[
-            : self.max_text
-        ]
-        els = await page.evaluate(_ELEMENTS_JS.replace("MAX", str(self.max_elements)))
+        for attempt in range(4):
+            with contextlib.suppress(Exception):  # a slow page is still worth looking at
+                await page.wait_for_load_state("domcontentloaded", timeout=self.timeout_ms)
+            try:
+                text, els, title = await self._read_page(page)
+                break
+            except Exception as e:
+                if (
+                    attempt == 3
+                    or "navigation" not in str(e).lower()
+                    and "context was destroyed" not in str(e).lower()
+                ):
+                    raise
+                await asyncio.sleep(0.1 * (attempt + 1))
         lines = []
         for el in els:
             kind = el["tag"] if not el["type"] else f"{el['tag']}({el['type']})"
             link = f" -> {el['href']}" if el["href"] else ""
             lines.append(f'[{el["id"]}] {kind} "{el["text"]}"{link}')
-        title = await page.title()
         body = f"Title: {title}\nURL: {page.url}\n\nPage text:\n{text}\n\nControls:\n" + (
             "\n".join(lines) or "(none)"
         )
-        return Observation(text=body, url=page.url, title=title)
+        image = None
+        if self.screenshots:
+            with contextlib.suppress(Exception):  # no picture is better than no observation
+                raw = await page.screenshot(
+                    type="jpeg",
+                    quality=self.screenshot_quality,
+                    animations="disabled",
+                    caret="hide",
+                )
+                if len(raw) <= self.max_image_bytes:
+                    image = base64.b64encode(raw).decode()
+        return Observation(text=body, url=page.url, title=title, image=image)
 
     async def reset(self) -> Observation:
         page = await self._start()

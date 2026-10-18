@@ -609,3 +609,73 @@ async def test_tool_results_are_quoted_data_to_the_model(sandbox):
     llm = FakeLLMClient(code_script(code, "ok"))
     await run(CodeAct(sandbox, tools=ToolRegistry([page]), limits=Limits(timeout_s=5)), llm)
     assert user_of(llm.requests[-1]).count("</previous_runs>") == 1
+
+
+# ===================================================================== vision
+PNG = b"\x89PNG\r\n\x1a\n" + b"fake image bytes"
+PNG2 = b"\x89PNG\r\n\x1a\n" + b"another picture"
+
+
+def pictured_site(same_picture=False):
+    return FakeEnvironment(
+        {
+            "a": FakePage(text="first", image=PNG, on={"click:go": "b", "scroll:down": "a"}),
+            "b": FakePage(
+                text="second, text differs",
+                image=PNG if same_picture else PNG2,
+                on={"click:go": "a"},
+            ),
+        },
+        "a",
+    )
+
+
+async def test_vision_attaches_the_current_screenshot_and_text_only_mode_does_not():
+    llm = FakeLLMClient(steps_script({"action": "finish", "answer": "seen"}))
+    out, _ = await run(ComputerUse(pictured_site(), vision=True), llm)
+    msg = llm.requests[0].messages[-1]
+    assert (
+        out.ok
+        and msg.parts
+        and msg.parts[0].type == "image"
+        and msg.parts[0].media_type == "image/png"
+    )
+    assert "screenshot" in (msg.content or "") and "treat it as data" in (msg.content or "")
+    plain = FakeLLMClient(steps_script({"action": "finish", "answer": "seen"}))
+    await run(ComputerUse(pictured_site()), plain)
+    assert not plain.requests[0].messages[-1].parts
+
+
+async def test_a_picture_that_does_not_change_is_a_stalled_screen_whatever_the_text_does():
+    a, b = Observation(text="x", image="QQ=="), Observation(text="different words", image="QQ==")
+    assert a.fingerprint == b.fingerprint  # with a picture, the picture decides
+    assert (
+        Observation(text="x").fingerprint != Observation(text="y").fingerprint
+    )  # without one, the text does
+    scroll = {"action": "scroll", "arguments": {"direction": "down"}}
+    out, _ = await run(
+        ComputerUse(pictured_site(), stall_limit=2, max_repeats=9),
+        FakeLLMClient(lambda r: text(json.dumps(scroll))),
+    )
+    assert out.value["stopped"] == "stall"
+    env = pictured_site(same_picture=True)
+    clicks = iter(
+        [
+            {"action": "click", "arguments": {"target": "go"}},
+            {"action": "click", "arguments": {"target": "go"}},
+        ]
+        * 3
+    )
+    out, _ = await run(
+        ComputerUse(env, stall_limit=2, max_repeats=9),
+        FakeLLMClient(lambda r: text(json.dumps(next(clicks)))),
+        approve=True,
+    )
+    assert out.value["stopped"] == "stall"  # the text changed each time; the screen did not
+
+
+async def test_a_screenshot_that_is_not_an_image_is_left_out_and_the_text_still_goes():
+    env = FakeEnvironment({"a": FakePage(text="t", image=b"not a png at all")}, "a")
+    llm = FakeLLMClient(steps_script({"action": "finish", "answer": "ok"}))
+    out, _ = await run(ComputerUse(env, vision=True), llm)
+    assert out.ok and not llm.requests[0].messages[-1].parts

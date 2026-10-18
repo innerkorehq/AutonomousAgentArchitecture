@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Computer use, vision: `Observation` can carry a screenshot (`image`, `image_type`); with one, its fingerprint is the picture's digest, so `ComputerUse`'s stall rule stops on a screen that stopped changing. `ComputerUse(vision=True)` attaches the current screenshot to the prompt (quoted as untrusted); `BrowserEnvironment(screenshots=True)` takes them (JPEG, animations off, caret hidden).
+- Browser, DNS rebinding closed: `BrowserEnvironment` sends its traffic through a new `aaa.env.egress.EgressProxy` that resolves each name once, requires public addresses and connects to the address it checked; redirects, scripts, frames and WebSockets are held to the allow-list because they all pass through it. `pin_dns=False` keeps the older in-page checks. Also fixed: a click that started a navigation could make the next observation fail with "Execution context was destroyed".
 - CI: GitHub Actions moved to their Node 24 releases (`checkout` 5, `setup-uv` 7, `upload-artifact` 7, `download-artifact` 8, `upload-pages-artifact` 5).
 - Fixed: parameters of a `@tool` function written as `Annotated[int, Field(ge=1, le=3)]` lost their constraints (the type hints were read without their metadata), so the schema the model saw and the validation applied had no range, pattern or length. They are kept now.
 - `jsonschema` is a required dependency: tool arguments and structured outputs are always validated against their full JSON Schema (ranges, enums, patterns, nested schemas). The weaker fallback that applied when it was not installed is gone, so there is no configuration in which validation is silently reduced.

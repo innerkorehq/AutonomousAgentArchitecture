@@ -129,7 +129,9 @@ class FakeRoute:
 
 
 async def test_every_request_is_checked_against_the_allow_list():
-    env = BrowserEnvironment(["example.com"], "https://example.com/", allow_private_networks=True)
+    env = BrowserEnvironment(
+        ["example.com"], "https://example.com/", allow_private_networks=True, pin_dns=False
+    )
     results = {}
     for url in (
         "https://example.com/a",
@@ -156,7 +158,9 @@ async def test_every_request_is_checked_against_the_allow_list():
 
 
 async def test_a_redirect_to_a_host_that_is_not_allowed_is_never_requested():
-    env = BrowserEnvironment(["example.com"], "https://example.com/", allow_private_networks=True)
+    env = BrowserEnvironment(
+        ["example.com"], "https://example.com/", allow_private_networks=True, pin_dns=False
+    )
     start = "https://example.com/go"
     for navigation in (True, False):
         route = FakeRoute(start, {start: FakeResponse(302, "https://evil.com/steal")}, navigation)
@@ -166,7 +170,9 @@ async def test_a_redirect_to_a_host_that_is_not_allowed_is_never_requested():
 
 
 async def test_an_allowed_redirect_is_followed_without_skipping_the_check():
-    env = BrowserEnvironment(["example.com"], "https://example.com/", allow_private_networks=True)
+    env = BrowserEnvironment(
+        ["example.com"], "https://example.com/", allow_private_networks=True, pin_dns=False
+    )
     start, middle = "https://example.com/a", "https://example.com/b"
     nav = FakeRoute(start, {start: FakeResponse(301, "/b")}, navigation=True)
     await env._route(nav)
@@ -281,3 +287,39 @@ async def test_text_goes_into_ordinary_fields_and_never_into_credential_fields(s
             await env.act("click", {"element": 999})
     finally:
         await env.aclose()
+
+
+async def test_with_the_egress_proxy_the_route_hook_only_screens_and_the_proxy_holds_redirects():
+    env = BrowserEnvironment(["example.com"], "https://example.com/")
+    assert env.pin_dns and env.allowed_ports == [80, 443]
+    ok, bad = FakeRoute("https://example.com/a"), FakeRoute("https://evil.com/x")
+    await env._route(ok)
+    await env._route(bad)
+    assert (
+        ok.done == ["continue"] and ok.fetched == []
+    )  # nothing is fetched here: the proxy makes the connection, to the address it checked
+    assert bad.done == ["abort"]
+    assert BrowserEnvironment(["example.com"], "http://example.com:8080/").allowed_ports == [
+        80,
+        443,
+        8080,
+    ]
+
+
+async def test_screenshots_are_taken_diffed_and_off_by_default(site):
+    env = await browser(site, screenshots=True)
+    try:
+        first = await env.observe()
+        again = await env.observe()
+        assert (
+            first.image and first.fingerprint == again.fingerprint
+        )  # an unchanged page looks unchanged
+        moved = await env.act("click", {"element": 1})
+        assert moved.fingerprint != first.fingerprint
+    finally:
+        await env.aclose()
+    plain = await browser(site)
+    try:
+        assert (await plain.observe()).image is None
+    finally:
+        await plain.aclose()

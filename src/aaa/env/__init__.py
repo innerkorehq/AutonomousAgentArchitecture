@@ -15,6 +15,7 @@ The rules every environment follows, because what it shows is written by someone
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 from collections.abc import Mapping
 from typing import Any, Protocol, runtime_checkable
@@ -40,18 +41,24 @@ class ActionSpec(BaseModel):
 
 
 class Observation(BaseModel):
-    """What the environment shows after an action. `fingerprint` changes when the state does (used to notice a stuck loop)."""
+    """What the environment shows after an action. `fingerprint` changes when the state does (used to notice a stuck loop).
+
+    `image` is an optional screenshot (base64 of a PNG or JPEG, `image_type` says which). When there is one, the fingerprint is the picture's digest: what a person
+    would see is what counts, so a page whose text moves while the picture does not is a stalled page, and the reverse."""
 
     text: str
     url: str | None = None
     title: str | None = None
     fingerprint: str = ""
+    image: str | None = None
+    image_type: str = "image/jpeg"
 
     @model_validator(mode="after")
     def _finish(self) -> Observation:
         self.text = self.text[:MAX_TEXT]
         if not self.fingerprint:
-            self.fingerprint = hashlib.sha256(f"{self.url}|{self.text}".encode()).hexdigest()[:16]
+            basis = f"img|{self.image}" if self.image else f"{self.url}|{self.text}"
+            self.fingerprint = hashlib.sha256(basis.encode()).hexdigest()[:16]
         return self
 
 
@@ -116,6 +123,9 @@ def env_tools(env: Environment) -> list[Tool]:
 class FakePage(BaseModel):
     text: str
     on: dict[str, str] = Field(default_factory=dict)  # "click:pricing" -> next page name
+    image: bytes | None = (
+        None  # a screenshot to show with the page (PNG bytes), if the test wants one
+    )
 
 
 class FakeEnvironment:
@@ -165,8 +175,13 @@ class FakeEnvironment:
         }
 
     def _look(self) -> Observation:
+        page = self.pages[self.current]
         return Observation(
-            text=self.pages[self.current].text, url=f"fake://{self.current}", title=self.current
+            text=page.text,
+            url=f"fake://{self.current}",
+            title=self.current,
+            image=base64.b64encode(page.image).decode() if page.image else None,
+            image_type="image/png",
         )
 
     async def reset(self) -> Observation:
