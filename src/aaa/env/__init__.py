@@ -57,7 +57,8 @@ class Observation(BaseModel):
 
 @runtime_checkable
 class Environment(Protocol):
-    actions: Mapping[str, ActionSpec]
+    @property
+    def actions(self) -> Mapping[str, ActionSpec]: ...
 
     async def reset(self) -> Observation: ...
     async def observe(self) -> Observation: ...
