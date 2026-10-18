@@ -375,3 +375,33 @@ async def test_agents_run_over_real_stdio_with_an_engine_the_configuration_build
         assert [t.name for t in await c.list_tools()] == ["ask"]
         out, is_error = await c.call("ask", {"input": "hello"})
         assert out == "answer to: hello" and not is_error
+
+
+async def test_algorithms_from_the_newer_families_can_be_exposed_as_tools():
+    spec = MCPSpec.model_validate(
+        {
+            "runtime": {"engine": "helpers.aaa_mcp_agents:engine"},
+            "agents": [
+                {
+                    "name": "pick_best",
+                    "algorithm": "helpers.aaa_mcp_agents:best_of",
+                    "description": "Best of three.",
+                    "budget": {"deadline_s": 20},
+                },
+                {
+                    "name": "blend",
+                    "algorithm": "helpers.aaa_mcp_agents:mixture",
+                    "description": "A mixture.",
+                    "budget": {"deadline_s": 20},
+                },
+            ],
+        }
+    )
+    core = await acompile_spec(spec)
+    assert {t.name for t in core.list_tools()} == {"pick_best", "blend"}
+    async with (
+        core.engine
+    ):  # the engine the configuration built runs for as long as the server does
+        for name in ("pick_best", "blend"):
+            r = await core.call(name, {"input": "hello"})
+            assert not r.is_error and "answer to: hello" in r.text, (name, r.text)

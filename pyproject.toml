@@ -52,6 +52,7 @@ bedrock = ["boto3>=1.35"]
 # Document ingestion (aaa.ingest): PDFs. Everything else in ingestion uses the standard library.
 pdf = ["pypdf>=4"]
 mcp-config = ["pyyaml>=6"]  # read MCP server configurations written as YAML (JSON and TOML need nothing)
+browser = ["playwright>=1.40"]  # aaa.env.browser: a browser as an environment (then: playwright install chromium)
 mcp = ["mcp>=1.21.2,<3"]  # MCP client (aaa.mcp); works with both the 1.x and 2.x SDK
 docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]
 

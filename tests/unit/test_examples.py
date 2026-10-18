@@ -128,6 +128,11 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "environment_algorithms.py": [
+        "computer: 20 euros a month | actions 1 | approvals asked 1",
+        "codeact: The sum of the first ten squares is 385. | it ran: 385 | approvals asked 1",
+        "anytime: 42 | tried ['quick', 'careful'] | stopped: accepted",
+    ],
     "multi_agent_algorithms.py": [
         "mixture: Paris, the capital of France (3 proposers agreed) | layers [3, 3]",
         "blackboard: Launch on Tuesday, after the fix. | board ['researcher', 'critic']",

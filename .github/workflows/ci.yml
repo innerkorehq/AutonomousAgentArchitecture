@@ -292,6 +292,22 @@ jobs:
       - name: Built-in tool and sandbox tests
         run: uv run pytest -v -p no:cacheprovider tests/unit/test_builtin_tools.py tests/unit/test_sandbox.py
 
+  browser:
+    # aaa.env.browser against a real Chromium and a local page: allow-list, redirects, credential fields. (Without a browser these tests skip; here they must run.)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AAA_REQUIRE_BROWSER: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --extra browser
+      - run: uv run playwright install --with-deps chromium
+      - name: Browser environment and computer-use tests
+        run: uv run pytest -v -p no:cacheprovider tests/unit/test_browser_env.py tests/unit/test_algos_a6.py
+
   server:
     # aaa-server against a real Redis (the shared rate limiter) and as a built, installed package (the console script works from a clean venv).
     runs-on: ubuntu-latest

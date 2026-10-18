@@ -1,4 +1,7 @@
+from aaa.algos.anytime import Anytime, Rung
+from aaa.algos.codeact import CodeAct
 from aaa.algos.compiler import LLMCompiler
+from aaa.algos.computer import ComputerUse
 from aaa.algos.control import FSM, Node, WorkflowGraph
 from aaa.algos.debate import Debate
 from aaa.algos.decompose import LeastToMost, SelfAsk
@@ -29,11 +32,14 @@ __all__ = [
     "LATS",
     "AdaptiveRAG",
     "Agent",
+    "Anytime",
     "AskHuman",
     "Auction",
     "BestOfN",
     "Blackboard",
     "ChainOfVerification",
+    "CodeAct",
+    "ComputerUse",
     "CorrectiveRAG",
     "Debate",
     "GenerateTestRepair",
@@ -58,6 +64,7 @@ __all__ = [
     "RolePlaySOP",
     "Route",
     "Router",
+    "Rung",
     "SelfAsk",
     "SelfConsistency",
     "SelfManagedMemory",

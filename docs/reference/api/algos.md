@@ -78,6 +78,26 @@
 
 ::: aaa.algos.AskHuman
 
+::: aaa.algos.ComputerUse
+
+::: aaa.env.Environment
+
+::: aaa.env.ActionSpec
+
+::: aaa.env.Observation
+
+::: aaa.env.FakeEnvironment
+
+::: aaa.env.env_tools
+
+::: aaa.env.browser.BrowserEnvironment
+
+::: aaa.algos.CodeAct
+
+::: aaa.algos.Anytime
+
+::: aaa.algos.Rung
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route

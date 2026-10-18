@@ -2,7 +2,7 @@
 
 import asyncio
 
-from aaa.algos import ToolLoop
+from aaa.algos import BestOfN, MixtureOfAgents, ToolLoop
 from aaa.llm import FakeLLMClient, LLMHandler
 from aaa.llm.fake import text
 from aaa.runtime import Engine
@@ -42,3 +42,8 @@ class Slow:
 
 
 slow = Slow()
+
+
+# -- algorithms from the newer families, to show any algorithm can be exposed as a tool ----------------
+best_of = BestOfN(3, score=lambda task, answer: len(answer))
+mixture = MixtureOfAgents(proposers=2, layers=1)

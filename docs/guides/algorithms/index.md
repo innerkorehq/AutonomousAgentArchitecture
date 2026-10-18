@@ -31,6 +31,9 @@ flowchart TD
     Q -->|Plan every tool call first| PF{Can it react?}
     PF -->|No: cheapest| RW[ReWOO]
     PF -->|Yes: a joiner may replan| LC[LLMCompiler]
+    Q -->|Act on a screen or a site| CU[ComputerUse]
+    Q -->|Compute with code| CA[CodeAct]
+    Q -->|Cheap first, escalate if the budget allows| AT[Anytime]
     Q -->|Several agents together| MA{How do they coordinate?}
     MA -->|Layers refine each other's answers| MOA[MixtureOfAgents]
     MA -->|Shared board, a chair picks who writes| BB[Blackboard]
@@ -72,6 +75,9 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`ComputerUse`](environments.md) | the model, one action at a time, with stop rules | `max_steps + 1` | `env`, `max_steps`, `max_repeats`, `stall_limit` | `{"answer", "steps", "stopped"}` |
+| [`CodeAct`](environments.md) | the model, as Python run in a sandbox | `max_steps + 1` | `sandbox`, `max_steps`, `requires_approval` | `{"answer", "steps", "turns"}` |
+| [`Anytime`](environments.md) | a ladder of your algorithms, budget-aware | the rungs' | `ladder`, `accept` | `{"value", "rung", "tried", "degraded", "stopped"}` |
 | [`MixtureOfAgents`](multi-agent-human.md) | layers, then an aggregator | `proposers * layers + 1` | `proposers`, `layers`, `personas`, `models` | `{"answer", "layers"}` |
 | [`Blackboard`](multi-agent-human.md) | a chair model, among your experts | `2 * max_rounds + 1` at most | `experts`, `max_rounds` | `{"answer", "board", "rounds"}` |
 | [`Auction`](multi-agent-human.md) | bids, awarded by a rule in code | one bid per worker + the winner's run | `workers`, `rule`, `fallback`, `child_budget` | `{"text", "winner", "tried", "bids"}` |

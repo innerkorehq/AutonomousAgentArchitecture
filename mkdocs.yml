@@ -100,6 +100,7 @@ nav:
           - Corrective, Self- and Adaptive RAG: guides/algorithms/rag-checked.md
           - Memory and self-improvement: guides/algorithms/memory-self-improvement.md
           - Multi-agent coordination and asking a person: guides/algorithms/multi-agent-human.md
+          - Computer use, code as action, anytime: guides/algorithms/environments.md
           - Writing your own: guides/algorithms/custom.md
       - Persistence and recovery: guides/persistence.md
       - Running a cluster: guides/clusters.md
