@@ -8,6 +8,7 @@ from aaa.algos.hier import HierarchicalAgent
 from aaa.algos.lats import LATS
 from aaa.algos.loops import LLMLoop, ReAct, RecallConfig, ToolLoop
 from aaa.algos.plan import Plan, PlanAndExecute, Step
+from aaa.algos.rag2 import AdaptiveRAG, CorrectiveRAG, SelfRAG
 from aaa.algos.refine import GenerateTestRepair, GeneratorCritic
 from aaa.algos.reflexion import Reflexion
 from aaa.algos.route import Route, Router
@@ -19,9 +20,11 @@ from aaa.algos.verify import BestOfN, ChainOfVerification, SelfRefine
 __all__ = [
     "FSM",
     "LATS",
+    "AdaptiveRAG",
     "Agent",
     "BestOfN",
     "ChainOfVerification",
+    "CorrectiveRAG",
     "Debate",
     "GenerateTestRepair",
     "GeneratorCritic",
@@ -43,6 +46,7 @@ __all__ = [
     "Router",
     "SelfAsk",
     "SelfConsistency",
+    "SelfRAG",
     "SelfRefine",
     "Step",
     "Supervisor",

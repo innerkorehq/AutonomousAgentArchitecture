@@ -38,6 +38,12 @@
 
 ::: aaa.algos.HierarchicalAgent
 
+::: aaa.algos.CorrectiveRAG
+
+::: aaa.algos.SelfRAG
+
+::: aaa.algos.AdaptiveRAG
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route

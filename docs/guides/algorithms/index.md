@@ -31,6 +31,10 @@ flowchart TD
     Q -->|Plan every tool call first| PF{Can it react?}
     PF -->|No: cheapest| RW[ReWOO]
     PF -->|Yes: a joiner may replan| LC[LLMCompiler]
+    Q -->|Answer from my documents, checked| RC{What matters?}
+    RC -->|Grade passages, fall back to web| CRG[CorrectiveRAG]
+    RC -->|One answer per passage, judge support| SRG[SelfRAG]
+    RC -->|Match retrieval to the question| ARG[AdaptiveRAG]
     Q -->|Specialist workers, each with a budget| HA[HierarchicalAgent]
     Q -->|Break the question down| DC{How?}
     DC -->|Easy sub-questions first| L2M[LeastToMost]
@@ -57,6 +61,9 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`CorrectiveRAG`](rag-checked.md) | grades per passage | `(rewrites + 1) * k + rewrites + k + 1` at most | `index`, `k`, `web_tool`, `min_relevant`, `max_rewrites` | `{"text", "sources", "queries", "route", "graded"}` |
+| [`SelfRAG`](rag-checked.md) | per-passage judgments | `adaptive + 2 * candidates * (rewrites + 1) + rewrites` at most | `adaptive`, `max_candidates`, `max_rewrites` | `{"text", "source", "supported", "useful", "queries", "rounds", "route"}` |
+| [`AdaptiveRAG`](rag-checked.md) | a routing call | `max_hops + 2` at most | `max_hops` | `{"text", "route", "hops", "sources", "queries"}` |
 | [`ReWOO`](plan-first.md) | a plan checked before it runs | 2 | `tool_names`, `max_steps`, `on_step_error` | `{"text", "plan", "evidence", "rounds"}` |
 | [`LLMCompiler`](plan-first.md) | a plan checked before it runs, then a joiner | `2 * (max_replans + 1)` | same, `max_replans` | `{"text", "plan", "evidence", "rounds"}` |
 | [`HierarchicalAgent`](plan-first.md) | a manager's validated sub-goal DAG | manager + workers | `workers`, `max_subgoals`, `max_depth`, `child_budget` | `{"text", "subgoals", "depth"}` |

@@ -128,6 +128,12 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "retrieval_algorithms.py": [
+        "corrective: Answered from web:w1 | route web | sources ['web:w1']",
+        "corrective: Answered from fr | route index | graded 2 passages",
+        "self-rag: Answered from fr | supported full | from fr",
+        "adaptive: iterative with 2 searches; Answered from fr, de",
+    ],
     "planning_algorithms.py": [
         "rewoo: Paris has 2.1 million people. | evidence {'E1': 'Paris', 'E2': '2.1 million', 'E3': '4'} | model calls: 2",
         "llm-compiler: Paris has 2.1 million people; 2 + 2 = 4. | rounds 2",
