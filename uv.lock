@@ -397,6 +397,7 @@ source = { editable = "." }
 dependencies = [
     { name = "anyio" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "pydantic" },
 ]
 
@@ -510,6 +511,7 @@ requires-dist = [
     { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0" },
     { name = "graphiti-core", marker = "extra == 'graphiti'", specifier = ">=0.30" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "jsonschema", specifier = ">=4.18" },
     { name = "lancedb", marker = "extra == 'lancedb'", specifier = ">=0.20" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=1.0" },
     { name = "langgraph", marker = "extra == 'langmem'", specifier = ">=1.0" },

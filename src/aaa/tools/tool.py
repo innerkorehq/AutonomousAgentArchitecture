@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, get_type_hints
 
+from jsonschema import validators
 from pydantic import BaseModel, ConfigDict, ValidationError, create_model
 from pydantic_core import to_jsonable_python
 
@@ -98,7 +99,7 @@ class Tool:
         else:
             self.guard = {**(guard or {}), **({"delivery": delivery} if delivery else {})}
             check_overrides(self.guard)  # field-level errors surface at definition time, not at 3am
-        sig, hints = inspect.signature(fn), get_type_hints(fn)
+        sig, hints = inspect.signature(fn), get_type_hints(fn, include_extras=True)
         self.wants_ctx = "ctx" in sig.parameters
         fields: dict[str, Any] = {}
         for pname, p in sig.parameters.items():
@@ -141,41 +142,15 @@ class Tool:
 
 
 def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> list[str]:
-    """Check `arguments` against a JSON Schema; returns human-readable problems (empty = valid).
-    Uses `jsonschema` when installed (it is, with the `mcp` extra); otherwise a conservative subset:
-    required keys, unknown keys when `additionalProperties` is false, and primitive types."""
-    try:
-        from jsonschema import validators  # pyright: ignore[reportMissingModuleSource]
-    except ImportError:
-        validators = None
-    if validators is not None:
-        validator = validators.validator_for(schema)
-        return [
-            f"{'.'.join(map(str, e.absolute_path)) or 'arguments'}: {e.message}"
-            for e in sorted(
-                validator(schema).iter_errors(arguments), key=lambda e: list(e.absolute_path)
-            )
-        ]
-    problems: list[str] = []
-    props = schema.get("properties") or {}
-    problems += [
-        f"{k}: is a required property" for k in schema.get("required", []) if k not in arguments
+    """Check `arguments` against a JSON Schema (the draft the schema declares, else the latest); returns human-readable problems (empty = valid).
+    `jsonschema` is a required dependency: ranges, enums, patterns and nested schemas are enforced, never skipped."""
+    validator = validators.validator_for(schema)
+    return [
+        f"{'.'.join(map(str, e.absolute_path)) or 'arguments'}: {e.message}"
+        for e in sorted(
+            validator(schema).iter_errors(arguments), key=lambda e: list(e.absolute_path)
+        )
     ]
-    if schema.get("additionalProperties") is False:
-        problems += [f"{k}: unexpected argument" for k in arguments if k not in props]
-    kinds = {
-        "string": str,
-        "integer": int,
-        "number": (int, float),
-        "boolean": bool,
-        "array": list,
-        "object": dict,
-    }
-    for k, v in arguments.items():
-        want = (props.get(k) or {}).get("type")
-        if isinstance(want, str) and want in kinds and not isinstance(v, kinds[want]):
-            problems.append(f"{k}: expected {want}")
-    return problems
 
 
 class SchemaTool(Tool):

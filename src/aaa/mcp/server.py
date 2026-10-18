@@ -31,6 +31,8 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
+import jsonschema
+
 from aaa.mcp.model import (
     MCPAnnotations,
     MCPCallResult,
@@ -332,12 +334,6 @@ def _default_annotations(t: Tool) -> MCPAnnotations | None:
 
 
 def _violates(schema: dict[str, Any], value: Any) -> str | None:
-    try:
-        import jsonschema  # pyright: ignore[reportMissingModuleSource]
-    except (
-        ImportError
-    ):  # the mcp extra brings it; without it the value is trusted as the tool's own
-        return None
     try:
         jsonschema.validate(value, schema)
     except jsonschema.ValidationError as e:

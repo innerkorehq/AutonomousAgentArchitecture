@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: parameters of a `@tool` function written as `Annotated[int, Field(ge=1, le=3)]` lost their constraints (the type hints were read without their metadata), so the schema the model saw and the validation applied had no range, pattern or length. They are kept now.
+- `jsonschema` is a required dependency: tool arguments and structured outputs are always validated against their full JSON Schema (ranges, enums, patterns, nested schemas). The weaker fallback that applied when it was not installed is gone, so there is no configuration in which validation is silently reduced.
+
 ## 0.5.0 (2026-10-18)
 
 - New algorithms (programme A1): `SelfRefine`, `ChainOfVerification`, `BestOfN` (verifier: pure scorer, tool or model judge), `LeastToMost`, `SelfAsk` (optionally with a lookup tool), `GraphOfThoughts` (a validated graph of generate/aggregate/refine/score/keep_best operations) and `LATS` (UCT tree search with reflections). All are event-sourced, bounded at construction with a known `max_calls`, and independent of the order parallel calls finish in. `aaa.algos.base` gains the shared `Calls` projection and `ask`, `task_text`, `clamp_score`, `data_block` helpers (additive).

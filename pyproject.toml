@@ -19,7 +19,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.7", "anyio>=4.4", "httpx>=0.27"]
+dependencies = ["pydantic>=2.7", "anyio>=4.4", "httpx>=0.27", "jsonschema>=4.18"]  # jsonschema: tool arguments are validated against their schema, always
 
 [project.optional-dependencies]
 litellm = ["litellm"]

@@ -464,7 +464,6 @@ async def test_calls_are_built_from_the_arguments(tmp_path, backend):
 
 
 async def test_arguments_are_validated_before_any_request(tmp_path, backend):
-    pytest.importorskip("jsonschema")  # full JSON Schema validation comes with the mcp extra
     core = await build(tmp_path, backend)
     before = len(backend.seen)
     for name, args in (
@@ -864,7 +863,6 @@ async def test_refs_cycles_allof_and_3_0_numeric_bounds_are_resolved_safely(tmp_
 
 
 async def test_response_schemas_are_only_advertised_when_asked_for(tmp_path, backend):
-    pytest.importorskip("jsonschema")  # full JSON Schema validation comes with the mcp extra
     plain = await build(tmp_path, backend)
     assert all(t.output_schema is None for t in plain.list_tools())
     typed = await build(tmp_path, backend, use_response_schemas=True)
