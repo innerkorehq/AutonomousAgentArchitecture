@@ -367,7 +367,32 @@ class OpenAPISource(_Source):
     )
 
 
+_ENV_REF = r"^(?:env:[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})$"
 _HEADER_REF = r"^(?:env:[A-Za-z_][A-Za-z0-9_]*|[A-Za-z0-9 _.-]{0,40}\$\{[A-Za-z_][A-Za-z0-9_]*\})$"
+
+
+class OAuthSpec(_M):
+    """OAuth 2.0 client credentials for an HTTP upstream (see `aaa.mcp.sources.mcp_oauth`). The secret is an `env:` reference; the token endpoint must be https
+    and its host listed in `token_hosts`; the token goes only to the upstream's own host."""
+
+    token_url: str = Field(max_length=500)
+    token_hosts: list[str] = Field(min_length=1)
+    client_id: str = Field(min_length=1, max_length=200)  # "env:NAME" or the (non-secret) id itself
+    client_secret: str  # "env:NAME" or "${NAME}"
+    scope: str | None = Field(default=None, max_length=500)
+    audience: str | None = Field(default=None, max_length=500)
+    client_auth: Literal["basic", "post"] = "basic"
+    timeout_s: float = Field(default=10.0, gt=0, le=60)
+
+    @model_validator(mode="after")
+    def _check(self) -> OAuthSpec:
+        import re
+
+        if not re.match(_ENV_REF, self.client_secret):
+            raise ValueError(
+                "client_secret must be an environment reference ('env:NAME' or '${NAME}'), never the value itself"
+            )
+        return self
 
 
 class McpSource(_Source):
@@ -408,6 +433,9 @@ class McpSource(_Source):
     optional: bool = (
         False  # if the upstream is down at startup: report it and carry on without its tools
     )
+    oauth: OAuthSpec | None = (
+        None  # fetch a bearer token with the client-credentials grant (http only)
+    )
     resources: bool = (
         False  # also re-expose the upstream's (text) resources, under aaa://upstream/<name>/...
     )
@@ -423,8 +451,10 @@ class McpSource(_Source):
         if self.transport == "stdio":
             if not self.command:
                 raise ValueError("a stdio upstream needs a command")
-            if self.url or self.headers or self.allowed_hosts:
-                raise ValueError("url, headers and allowed_hosts apply to http upstreams only")
+            if self.url or self.headers or self.allowed_hosts or self.oauth:
+                raise ValueError(
+                    "url, headers, allowed_hosts and oauth apply to http upstreams only"
+                )
         else:
             if not self.url:
                 raise ValueError("an http upstream needs a url")
@@ -436,6 +466,8 @@ class McpSource(_Source):
                 raise ValueError(
                     "an http upstream needs allowed_hosts: the only host(s) this server may call"
                 )
+            if self.oauth is not None and any(k.lower() == "authorization" for k in self.headers):
+                raise ValueError("oauth supplies the Authorization header: remove it from headers")
         for k in [*self.env, *self.env_from]:
             if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", k):
                 raise ValueError(f"{k!r} is not a valid environment variable name")
@@ -562,6 +594,7 @@ __all__ = [
     "McpSource",
     "MemoryResource",
     "ModuleSource",
+    "OAuthSpec",
     "ObjectsSource",
     "OpenAPISource",
     "ProfileSpec",

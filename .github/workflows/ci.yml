@@ -438,7 +438,7 @@ jobs:
       - name: Locked versions
         run: |
           uv sync --frozen --extra mem0 --extra graphiti --extra langgraph --extra langmem --extra mcp --extra mcp-config --extra otel
-          uv run pytest -v -p no:cacheprovider tests/unit/test_otel.py tests/unit/test_memory_signatures.py tests/unit/test_memory_adapters.py tests/unit/test_memory_contract.py tests/unit/test_mcp.py tests/unit/test_mcp_server.py tests/unit/test_mcp_gen.py tests/unit/test_mcp_gen_agents.py tests/unit/test_mcp_gen_resources.py tests/unit/test_mcp_gen_modules.py tests/unit/test_mcp_gen_openapi.py tests/unit/test_mcp_scaffold.py tests/unit/test_mcp_gen_upstream.py tests/unit/test_mcp_gen_policy.py tests/unit/test_mcp_gen_include.py tests/unit/test_mcp_client_config.py tests/unit/test_mcp_gen_profiles.py tests/server/test_mcp_http.py tests/unit/test_examples.py -k "not cluster"
+          uv run pytest -v -p no:cacheprovider tests/unit/test_otel.py tests/unit/test_memory_signatures.py tests/unit/test_memory_adapters.py tests/unit/test_memory_contract.py tests/unit/test_mcp.py tests/unit/test_mcp_server.py tests/unit/test_mcp_gen.py tests/unit/test_mcp_gen_agents.py tests/unit/test_mcp_gen_resources.py tests/unit/test_mcp_gen_modules.py tests/unit/test_mcp_gen_openapi.py tests/unit/test_mcp_scaffold.py tests/unit/test_mcp_gen_upstream.py tests/unit/test_mcp_gen_policy.py tests/unit/test_mcp_gen_include.py tests/unit/test_mcp_client_config.py tests/unit/test_mcp_gen_profiles.py tests/unit/test_mcp_gen_oauth.py tests/server/test_mcp_http.py tests/unit/test_examples.py -k "not cluster"
       - name: OpenAI SDK types (conformance of the Responses client; not a runtime dependency)
         run: |
           uv pip install openai
@@ -447,7 +447,7 @@ jobs:
         run: |
           for spec in "mcp<2" "mcp==1.21.2"; do
             uv pip install "$spec"
-            uv run --no-sync pytest -v -p no:cacheprovider tests/unit/test_mcp.py tests/unit/test_mcp_server.py tests/unit/test_mcp_gen.py tests/unit/test_mcp_gen_agents.py tests/unit/test_mcp_gen_resources.py tests/unit/test_mcp_gen_modules.py tests/unit/test_mcp_gen_openapi.py tests/unit/test_mcp_scaffold.py tests/unit/test_mcp_gen_upstream.py tests/unit/test_mcp_gen_policy.py tests/unit/test_mcp_gen_include.py tests/unit/test_mcp_client_config.py tests/unit/test_mcp_gen_profiles.py
+            uv run --no-sync pytest -v -p no:cacheprovider tests/unit/test_mcp.py tests/unit/test_mcp_server.py tests/unit/test_mcp_gen.py tests/unit/test_mcp_gen_agents.py tests/unit/test_mcp_gen_resources.py tests/unit/test_mcp_gen_modules.py tests/unit/test_mcp_gen_openapi.py tests/unit/test_mcp_scaffold.py tests/unit/test_mcp_gen_upstream.py tests/unit/test_mcp_gen_policy.py tests/unit/test_mcp_gen_include.py tests/unit/test_mcp_client_config.py tests/unit/test_mcp_gen_profiles.py tests/unit/test_mcp_gen_oauth.py
           done
       - name: Newest releases (scheduled and manual runs only)
         if: github.event_name != 'pull_request' && github.event_name != 'push'

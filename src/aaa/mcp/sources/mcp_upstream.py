@@ -24,6 +24,7 @@ from typing import Any
 from aaa.mcp.client import MCPClient, MCPToolInfo, _attr
 from aaa.mcp.config import Secret, SpecError
 from aaa.mcp.model import MCPAnnotations
+from aaa.mcp.sources.mcp_oauth import OAuthTokens, bearer_auth
 from aaa.mcp.sources.mcp_passthrough import UpstreamPrompt, UpstreamResources, paged
 from aaa.mcp.spec import McpSource
 from aaa.tools.builtin.net import FetchBlocked, FetchPolicy, SafeFetcher
@@ -85,7 +86,13 @@ def _policy(src: McpSource) -> FetchPolicy:
     )
 
 
-def guarded_client(hx: Any, policy: FetchPolicy, headers: dict[str, str], src: McpSource) -> Any:
+def guarded_client(
+    hx: Any,
+    policy: FetchPolicy,
+    headers: dict[str, str],
+    src: McpSource,
+    tokens: OAuthTokens | None = None,
+) -> Any:
     """An `AsyncClient` of the given httpx flavour (`httpx` for SDK 1.x, `httpx2` for 2.x) whose every request is validated and pinned
     exactly as `SafeFetcher` does for a fetch: allowed host, public address, connection to the checked address, no redirects."""
     checker = SafeFetcher(policy)
@@ -118,6 +125,7 @@ def guarded_client(hx: Any, policy: FetchPolicy, headers: dict[str, str], src: M
 
     return hx.AsyncClient(
         transport=Guard(),
+        auth=bearer_auth(hx, tokens) if tokens is not None else None,
         headers=headers,
         follow_redirects=False,
         trust_env=False,
@@ -151,7 +159,7 @@ def resolve_headers(src: McpSource) -> dict[str, str]:
     return out
 
 
-def http_client(src: McpSource) -> MCPClient:
+def http_client(src: McpSource, tokens: OAuthTokens | None = None) -> MCPClient:
     policy = _policy(src)
     headers = resolve_headers(src)  # a missing variable is a startup error
     url = src.url or ""
@@ -163,7 +171,7 @@ def http_client(src: McpSource) -> MCPClient:
 
         hx = _httpx_flavour()
         if hasattr(transport, "streamable_http_client"):
-            client = guarded_client(hx, policy, headers, src)
+            client = guarded_client(hx, policy, headers, src, tokens)
             stack.push_async_callback(client.aclose)
             streams = await stack.enter_async_context(
                 transport.streamable_http_client(url, http_client=client)
@@ -173,7 +181,7 @@ def http_client(src: McpSource) -> MCPClient:
             def factory(
                 headers: dict[str, str] | None = None, timeout: Any = None, auth: Any = None
             ) -> Any:
-                return guarded_client(hx, policy, dict(headers or {}), src)
+                return guarded_client(hx, policy, dict(headers or {}), src, tokens)
 
             streams = await stack.enter_async_context(
                 transport.streamablehttp_client(
@@ -269,16 +277,20 @@ def _wrap(tool: Tool, upstream: Upstream, src: McpSource) -> Tool:
 
 async def start_upstream(src: McpSource) -> Loaded:
     """Connect to the upstream and return its (filtered, capped) tools. The caller must `aclose()` `Loaded.upstream`."""
+    tokens: OAuthTokens | None = None
     if src.transport == "stdio":
         make: Any = lambda: stdio_client(src)
     else:
-        make = lambda: http_client(src)
+        tokens = OAuthTokens(src, src.oauth) if src.oauth is not None else None
+        make = lambda: http_client(src, tokens)
         _policy(src)  # fail on a bad URL / host before any connection
         resolve_headers(src)
     if src.transport == "stdio":
         stdio_client(src)  # validate env_from before spawning anything
     up = Upstream(src, make)
     try:
+        if tokens is not None:
+            await tokens.get()  # an unusable authorization server is a startup problem, reported like an unreachable upstream
         await up.start()
     except SpecError:
         raise

@@ -98,6 +98,32 @@ optional = true                # if it is down at startup: say so and carry on w
 - **Lifecycle.** Connections are opened at startup (a failure is an error, or a note when `optional`) and the tool list is read once: restart to pick up upstream changes. A dead upstream gives a short generic tool error while the rest of the server keeps serving. `await core.aclose()` (or `async with core:`) disconnects and stops launched processes; `aaa mcp serve` does it for you, and a failed compile closes whatever it had already opened.
 - **One connection serves every caller, so an upstream is not tenant-isolated**, and tenant and user are never forwarded to it. Use an upstream only if it is safe to share.
 
+### OAuth to an HTTP upstream
+
+For an upstream that wants a bearer token from an authorization server, use the **client-credentials** grant (machine to machine; there is nobody in a headless server to send through a browser):
+
+```toml
+[[sources]]
+type = "mcp"
+name = "crm"
+transport = "http"
+url = "https://mcp.crm.example.com/mcp"
+allowed_hosts = ["mcp.crm.example.com"]
+
+[sources.oauth]
+token_url = "https://auth.crm.example.com/oauth/token"
+token_hosts = ["auth.crm.example.com"]      # mandatory: the only host the token request may go to
+client_id = "env:CRM_CLIENT_ID"             # an env reference, or the (non-secret) id itself
+client_secret = "env:CRM_CLIENT_SECRET"     # always an env reference
+scope = "tools.read"
+# audience = "https://api.crm.example.com"
+# client_auth = "post"                      # default "basic"; "post" sends the credentials in the form body
+```
+
+- The token is fetched when the server starts (an unusable authorization server is reported like an unreachable upstream, or skipped with `optional = true`), cached in memory, **refreshed 30 seconds before it expires**, fetched by one caller at a time, and replaced once after a `401` from the upstream.
+- The token request goes through the SSRF-safe fetcher like everything else: https (plain http only to loopback with `allow_insecure_loopback`), the host in `token_hosts`, public addresses only, no redirects. The client secret goes to the token endpoint only; the token goes to the upstream's host only and is never logged, shown by `inspect`, or put in a report.
+- A token response that is not a plain bearer token, or any failure, gives one generic message with nothing from the server's answer. `oauth` replaces an `Authorization` header (you cannot set both). Interactive (authorization-code) flows and dynamic client registration are not supported.
+
 ### Its resources and prompts
 
 Tools are the default. Add `resources = true` and/or `prompts = true` to the source to re-expose those too:
