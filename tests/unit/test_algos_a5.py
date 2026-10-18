@@ -625,11 +625,23 @@ async def test_triggers_are_bounded_pure_and_cannot_loop():
     assert (
         out.value["rounds"] == 1 and len(out.value["board"]) == 1
     )  # the board changed once and then the same expert is not triggered again... until it changes
-    forever = {"echo": Expert("repeats.", when=lambda board: True, auto=True, repeat=True)}
-    out, _ = await run(Blackboard(forever, max_rounds=3), llm)
-    assert (
-        out.value["rounds"] == 3 and len(out.value["board"]) == 3
-    )  # allowed to repeat, still capped
+    pingpong = {
+        "ping": Expert(
+            "serves.",
+            when=lambda board: not board or board[-1][0] == "pong",
+            auto=True,
+            repeat=True,
+        ),
+        "pong": Expert("returns.", when=after("ping"), auto=True, repeat=True),
+    }
+    llm = FakeLLMClient(lambda r: text("ball") if "You are the" in sys_of(r) else text("ANSWER"))
+    out, _ = await run(Blackboard(pingpong, max_rounds=4), llm)
+    assert [b["author"] for b in out.value["board"]] == [
+        "ping",
+        "pong",
+        "ping",
+        "pong",
+    ]  # they keep triggering each other, and the cap ends it
     boom = {"x": Expert("breaks.", when=lambda board: 1 / 0, auto=True), "y": Expert("fine.")}
     out, _ = await run(Blackboard(boom), FakeLLMClient(board_script(["y", "done"])))
     assert [b["author"] for b in out.value["board"]] == [
