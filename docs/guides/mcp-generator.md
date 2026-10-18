@@ -98,9 +98,9 @@ optional = true                # if it is down at startup: say so and carry on w
 - **Lifecycle.** Connections are opened at startup (a failure is an error, or a note when `optional`) and the tool list is read once: restart to pick up upstream changes. A dead upstream gives a short generic tool error while the rest of the server keeps serving. `await core.aclose()` (or `async with core:`) disconnects and stops launched processes; `aaa mcp serve` does it for you, and a failed compile closes whatever it had already opened.
 - **One connection serves every caller, so an upstream is not tenant-isolated**, and tenant and user are never forwarded to it. Use an upstream only if it is safe to share.
 
-### OAuth to an HTTP upstream
+### OAuth to an HTTP upstream (and to an OpenAPI API)
 
-For an upstream that wants a bearer token from an authorization server, use the **client-credentials** grant (machine to machine; there is nobody in a headless server to send through a browser):
+An OpenAPI source takes the same `[sources.oauth]` table instead of `auth` (a 401 from the API gets one token refresh and one retry; the API's host and the token endpoint's host are separate allow-lists). For an upstream that wants a bearer token from an authorization server, use the **client-credentials** grant (machine to machine; there is nobody in a headless server to send through a browser):
 
 ```toml
 [[sources]]
@@ -549,4 +549,4 @@ async def build() -> ServerConfig:
 
 ## Verified, and not
 
-Tested: configuration loading and precedence (JSON, TOML, YAML, environment, flags), selection/naming/override rules and their error messages, the kill-switch, structured output including the non-conforming and oversized cases, and that the official SDK server, the stdio subprocess and the HTTP handler all describe tools identically. The suite passes on the `mcp` SDK 1.21.2, 1.30 and 2.x. **Not verified:** real MCP hosts (Claude Desktop, IDEs); large public OpenAPI documents (hundreds of operations); OpenAPI 3.1-only constructs beyond the JSON Schema they share with 3.0; APIs that require OAuth. **The `mcp` extra now requires 1.21.2 or newer**: older 1.x releases no longer import with current pydantic.
+Tested: configuration loading and precedence (JSON, TOML, YAML, environment, flags), selection/naming/override rules and their error messages, the kill-switch, structured output including the non-conforming and oversized cases, and that the official SDK server, the stdio subprocess and the HTTP handler all describe tools identically. The suite passes on the `mcp` SDK 1.21.2, 1.30 and 2.x. **Not verified:** real MCP hosts (Claude Desktop, IDEs); large public OpenAPI documents (hundreds of operations); OpenAPI 3.1-only constructs beyond the JSON Schema they share with 3.0; APIs that need an interactive OAuth flow (only the client-credentials grant is supported, for OpenAPI and MCP HTTP sources); real OAuth providers (the tests use a local authorization server). **The `mcp` extra now requires 1.21.2 or newer**: older 1.x releases no longer import with current pydantic.

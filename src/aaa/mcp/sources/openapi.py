@@ -21,6 +21,7 @@ import httpx
 
 from aaa.mcp.config import Secret, SpecError
 from aaa.mcp.model import MCPAnnotations
+from aaa.mcp.sources.mcp_oauth import OAuthError, OAuthTokens
 from aaa.mcp.spec import OpenAPISource
 from aaa.tools.builtin.net import FetchBlocked, FetchPolicy, SafeFetcher
 from aaa.tools.tool import SchemaTool, ToolError
@@ -427,8 +428,10 @@ class _Caller:
         base: str,
         fetcher: SafeFetcher,
         gate: asyncio.Semaphore,
+        tokens: OAuthTokens | None = None,
     ) -> None:
         self.op, self.src, self.base, self.fetcher, self.gate = op, src, base, fetcher, gate
+        self.tokens = tokens
         self.host = (httpx.URL(base).host or "").lower()
         self.secret = Secret.parse(src.auth.secret, field="auth.secret") if src.auth else None
 
@@ -454,19 +457,31 @@ class _Caller:
         if auth_query:
             url += ("&" if "?" in url else "?") + urlencode(auth_query)
         async with self.gate:
-            try:
-                res = await self.fetcher.request(
-                    self.op.method.upper(),
-                    url,
-                    headers={**headers, "accept": "application/json, text/plain;q=0.5"},
-                    body=data,
-                    auth=auth_headers or None,
-                    auth_host=self.host,
-                    same_host_redirects_only=True,
-                    raw=True,
-                )
-            except FetchBlocked as e:
-                raise ToolError(f"the API call was not made or failed: {e}") from None
+            token: str | None = None
+            for attempt in range(2 if self.tokens is not None else 1):
+                if self.tokens is not None:
+                    try:
+                        token = await self.tokens.get(force=attempt > 0, stale=token)
+                    except OAuthError:
+                        raise ToolError(
+                            "the API call was not made: no access token could be obtained"
+                        ) from None
+                    auth_headers = {"authorization": f"Bearer {token}"}
+                try:
+                    res = await self.fetcher.request(
+                        self.op.method.upper(),
+                        url,
+                        headers={**headers, "accept": "application/json, text/plain;q=0.5"},
+                        body=data,
+                        auth=auth_headers or None,
+                        auth_host=self.host,
+                        same_host_redirects_only=True,
+                        raw=True,
+                    )
+                except FetchBlocked as e:
+                    raise ToolError(f"the API call was not made or failed: {e}") from None
+                if res.status != 401 or self.tokens is None:
+                    break  # a 401 with a token: the token was probably revoked or expired; get a new one and try once more
         if res.status >= 400:
             raise ToolError(f"the API answered HTTP {res.status}: {res.text[:300]}")
         if self.op.method == "head":
@@ -489,6 +504,18 @@ async def load_openapi(src: OpenAPISource, *, fetcher: SafeFetcher | None = None
         Secret.parse(
             src.auth.secret, field="auth.secret"
         ).value()  # a missing variable is a startup error, not a runtime one
+    tokens: OAuthTokens | None = None
+    if src.oauth is not None:
+        tokens = OAuthTokens(
+            "openapi",
+            src.oauth,
+            allow_private_networks=src.allow_private_networks,
+            allow_insecure_loopback=src.allow_private_networks,
+        )
+        try:
+            await tokens.get()  # an unusable authorization server is a startup error
+        except OAuthError as e:
+            raise SpecError(f"openapi {src.document}: {e}") from None
     gate = asyncio.Semaphore(src.max_concurrency)
     out = Loaded()
     skipped: list[str] = []
@@ -524,7 +551,7 @@ async def load_openapi(src: OpenAPISource, *, fetcher: SafeFetcher | None = None
                 fnmatch.fnmatchcase(op.op_id, g) for g in src.no_approval
             )
             tool = SchemaTool(
-                _Caller(op, src, base, shared_fetcher, gate),
+                _Caller(op, src, base, shared_fetcher, gate, tokens),
                 name=name,
                 description=op.description,
                 parameters=op.input_schema(),

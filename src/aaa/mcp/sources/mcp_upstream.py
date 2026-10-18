@@ -281,7 +281,16 @@ async def start_upstream(src: McpSource) -> Loaded:
     if src.transport == "stdio":
         make: Any = lambda: stdio_client(src)
     else:
-        tokens = OAuthTokens(src, src.oauth) if src.oauth is not None else None
+        tokens = (
+            OAuthTokens(
+                src.name,
+                src.oauth,
+                allow_private_networks=src.allow_private_networks,
+                allow_insecure_loopback=src.allow_insecure_loopback,
+            )
+            if src.oauth is not None
+            else None
+        )
         make = lambda: http_client(src, tokens)
         _policy(src)  # fail on a bad URL / host before any connection
         resolve_headers(src)

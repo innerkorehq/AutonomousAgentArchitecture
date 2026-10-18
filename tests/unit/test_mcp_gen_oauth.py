@@ -263,12 +263,10 @@ async def test_an_unusable_answer_from_the_authorization_server_fails_genericall
 
 async def test_a_token_expiry_is_clamped(stack):
     auth, _seen, ports = stack
+    src = MCPSpec.model_validate({"sources": [source(ports)]}).sources[0]
     for odd in (-5, 0, "soon", None, 10**12, True):
         auth.expires_in = odd
-        tokens = mcp_oauth.OAuthTokens(
-            MCPSpec.model_validate({"sources": [source(ports)]}).sources[0],
-            MCPSpec.model_validate({"sources": [source(ports)]}).sources[0].oauth,
-        )
+        tokens = mcp_oauth.OAuthTokens(src.name, src.oauth, allow_insecure_loopback=True)
         token, expires = await tokens._fetch()
         assert (
             token.startswith("tok-") and 29.9 <= expires - mcp_oauth.time.monotonic() <= 86_401
@@ -310,3 +308,133 @@ async def test_mistakes_are_refused_before_any_request(stack, monkeypatch):
         with pytest.raises(ValueError):
             MCPSpec.model_validate({"sources": [bad]})
     assert "tok" not in repr(mcp_oauth.OAuthError("x"))
+
+
+# ================================================================ the same for an OpenAPI source
+@pytest.fixture
+async def api_stack(tmp_path):
+    import uvicorn
+
+    auth = AuthServer()
+    seen: list[dict[str, str]] = []
+
+    async def api(scope, receive, send):
+        if scope["type"] != "http":
+            return
+        headers = {k.decode(): v.decode() for k, v in scope["headers"]}
+        seen.append(headers)
+        bearer = headers.get("authorization", "")
+        ok = bearer.startswith("Bearer ") and bearer[7:] in auth.valid
+        status, body = (
+            (200, b'{"id": 1, "name": "rex"}') if ok else (401, b'{"error": "unauthorized"}')
+        )
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+    async def token_app(scope, receive, send):
+        await auth.app(scope, receive, send)
+
+    ports = free_port(), free_port()
+    servers = [
+        uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=p, log_level="error"))
+        for app, p in ((api, ports[0]), (token_app, ports[1]))
+    ]
+    tasks = [asyncio.create_task(x.serve()) for x in servers]
+    while not all(x.started for x in servers):
+        await asyncio.sleep(0.02)
+    doc = tmp_path / "pets.json"
+    doc.write_text(
+        json.dumps(
+            {
+                "openapi": "3.0.3",
+                "info": {"title": "Pets", "version": "1"},
+                "servers": [{"url": f"http://127.0.0.1:{ports[0]}"}],
+                "paths": {
+                    "/pets/{id}": {
+                        "get": {
+                            "operationId": "getPet",
+                            "parameters": [
+                                {
+                                    "name": "id",
+                                    "in": "path",
+                                    "required": True,
+                                    "schema": {"type": "string"},
+                                }
+                            ],
+                            "responses": {"200": {"description": "ok"}},
+                        }
+                    }
+                },
+            }
+        )
+    )
+    yield auth, seen, ports, doc
+    for x in servers:
+        x.should_exit = True
+    await asyncio.gather(*tasks)
+
+
+def api_source(ports, doc, **over):
+    return {
+        "type": "openapi",
+        "document": str(doc),
+        "allowed_hosts": ["127.0.0.1"],
+        "allow_private_networks": True,
+        "oauth": {
+            "token_url": f"http://127.0.0.1:{ports[1]}/token",
+            "token_hosts": ["127.0.0.1"],
+            "client_id": "agent-1",
+            "client_secret": "env:OAUTH_SECRET",
+        },
+        **over,
+    }
+
+
+async def test_an_openapi_source_can_use_the_client_credentials_grant(api_stack):
+    auth, seen, ports, doc = api_stack
+    core = await acompile_spec(MCPSpec.model_validate({"sources": [api_source(ports, doc)]}))
+    first = await core.call("getPet", {"id": "1"})
+    assert (
+        not first.is_error and "rex" in first.text and seen[-1]["authorization"] == "Bearer tok-1"
+    )
+    await core.call("getPet", {"id": "2"})
+    assert len(auth.requests) == 1  # cached
+    auth.valid = set()  # revoked at the API
+    again = await core.call("getPet", {"id": "3"})
+    assert (
+        not again.is_error
+        and seen[-1]["authorization"] == "Bearer tok-2"
+        and len(auth.requests) == 2
+    )
+    assert SECRET not in json.dumps(core.report) + json.dumps(
+        core.spec.model_dump(mode="json"), default=str
+    )
+    assert not any(
+        "basic" in h.get("authorization", "").lower() for h in seen
+    )  # the client secret never reaches the API
+
+
+async def test_openapi_oauth_failures_are_startup_errors_and_auth_and_oauth_do_not_mix(api_stack):
+    auth, seen, ports, doc = api_stack
+    auth.mode = "status500"
+    with pytest.raises(SpecError) as e:
+        await acompile_spec(MCPSpec.model_validate({"sources": [api_source(ports, doc)]}))
+    assert (
+        SECRET not in str(e.value)
+        and "could not obtain an access token" in str(e.value)
+        and seen == []
+    )
+    with pytest.raises(ValueError, match="either auth or oauth"):
+        MCPSpec.model_validate(
+            {
+                "sources": [
+                    api_source(ports, doc, auth={"scheme": "bearer", "secret": "env:OAUTH_SECRET"})
+                ]
+            }
+        )

@@ -331,42 +331,6 @@ class AuthSpec(_M):
         return self
 
 
-class OpenAPISource(_Source):
-    """One tool per operation of an OpenAPI 3.0/3.1 document.
-
-    `allowed_hosts` is mandatory: the API's own host must be in it, and every request goes through the SSRF-safe fetcher (public
-    addresses only, connection pinned, redirects to other hosts refused). Operations that change state (`methods_requiring_approval`,
-    by default POST, PUT, PATCH and DELETE) require approval, and so stay hidden, unless matched by `no_approval`. Features this
-    generator does not support (cookie parameters, form bodies, non-default parameter styles ...) skip that operation with a note,
-    never silently mis-call it."""
-
-    type: Literal["openapi"]
-    document: str = Field(min_length=1, max_length=500)  # a file path or an https:// URL
-    base_url: str | None = Field(
-        default=None, max_length=500
-    )  # overrides the document's servers[0]
-    allowed_hosts: list[str] = Field(min_length=1)
-    allow_private_networks: bool = False  # explicit opt-in for an API on a private address
-    auth: AuthSpec | None = None
-    operations: list[str] = Field(default_factory=lambda: ["*"])  # globs on operationId
-    exclude_operations: list[str] = Field(default_factory=list)
-    methods_requiring_approval: list[Literal["get", "head", "put", "post", "patch", "delete"]] = (
-        Field(default_factory=lambda: ["post", "put", "patch", "delete"])
-    )
-    no_approval: list[str] = Field(
-        default_factory=list
-    )  # operationId globs that run without approval
-    description_overrides: dict[str, str] = Field(default_factory=dict)
-    description_max_chars: int = Field(default=1000, ge=50, le=5000)
-    max_response_bytes: int = Field(default=1_000_000, ge=1_000, le=20_000_000)
-    max_request_bytes: int = Field(default=100_000, ge=100, le=5_000_000)
-    timeout_s: float = Field(default=20.0, gt=0, le=300)
-    max_concurrency: int = Field(default=4, ge=1, le=64)
-    use_response_schemas: bool = (
-        False  # advertise the 2xx JSON schema as outputSchema and validate results against it
-    )
-
-
 _ENV_REF = r"^(?:env:[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})$"
 _HEADER_REF = r"^(?:env:[A-Za-z_][A-Za-z0-9_]*|[A-Za-z0-9 _.-]{0,40}\$\{[A-Za-z_][A-Za-z0-9_]*\})$"
 
@@ -392,6 +356,51 @@ class OAuthSpec(_M):
             raise ValueError(
                 "client_secret must be an environment reference ('env:NAME' or '${NAME}'), never the value itself"
             )
+        return self
+
+
+class OpenAPISource(_Source):
+    """One tool per operation of an OpenAPI 3.0/3.1 document.
+
+    `allowed_hosts` is mandatory: the API's own host must be in it, and every request goes through the SSRF-safe fetcher (public
+    addresses only, connection pinned, redirects to other hosts refused). Operations that change state (`methods_requiring_approval`,
+    by default POST, PUT, PATCH and DELETE) require approval, and so stay hidden, unless matched by `no_approval`. Features this
+    generator does not support (cookie parameters, form bodies, non-default parameter styles ...) skip that operation with a note,
+    never silently mis-call it."""
+
+    type: Literal["openapi"]
+    document: str = Field(min_length=1, max_length=500)  # a file path or an https:// URL
+    base_url: str | None = Field(
+        default=None, max_length=500
+    )  # overrides the document's servers[0]
+    allowed_hosts: list[str] = Field(min_length=1)
+    allow_private_networks: bool = False  # explicit opt-in for an API on a private address
+    auth: AuthSpec | None = None
+    oauth: OAuthSpec | None = (
+        None  # a bearer token from the client-credentials grant, instead of `auth`
+    )
+    operations: list[str] = Field(default_factory=lambda: ["*"])  # globs on operationId
+    exclude_operations: list[str] = Field(default_factory=list)
+    methods_requiring_approval: list[Literal["get", "head", "put", "post", "patch", "delete"]] = (
+        Field(default_factory=lambda: ["post", "put", "patch", "delete"])
+    )
+    no_approval: list[str] = Field(
+        default_factory=list
+    )  # operationId globs that run without approval
+    description_overrides: dict[str, str] = Field(default_factory=dict)
+    description_max_chars: int = Field(default=1000, ge=50, le=5000)
+    max_response_bytes: int = Field(default=1_000_000, ge=1_000, le=20_000_000)
+    max_request_bytes: int = Field(default=100_000, ge=100, le=5_000_000)
+    timeout_s: float = Field(default=20.0, gt=0, le=300)
+    max_concurrency: int = Field(default=4, ge=1, le=64)
+    use_response_schemas: bool = (
+        False  # advertise the 2xx JSON schema as outputSchema and validate results against it
+    )
+
+    @model_validator(mode="after")
+    def _one_credential(self) -> OpenAPISource:
+        if self.auth is not None and self.oauth is not None:
+            raise ValueError("give either auth or oauth, not both")
         return self
 
 

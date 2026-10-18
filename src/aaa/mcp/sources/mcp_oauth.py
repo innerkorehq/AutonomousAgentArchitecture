@@ -23,7 +23,7 @@ from typing import Any
 from urllib.parse import urlencode, urlsplit
 
 from aaa.mcp.config import Secret, SpecError
-from aaa.mcp.spec import McpSource, OAuthSpec
+from aaa.mcp.spec import OAuthSpec
 from aaa.tools.builtin.net import FetchBlocked, FetchPolicy, SafeFetcher
 
 log = logging.getLogger("aaa.mcp.oauth")
@@ -42,33 +42,40 @@ def _secret(ref: str, what: str) -> Secret:
 
 
 class OAuthTokens:
-    def __init__(self, src: McpSource, spec: OAuthSpec) -> None:
-        self.src, self.spec = src, spec
+    def __init__(
+        self,
+        name: str,
+        spec: OAuthSpec,
+        *,
+        allow_private_networks: bool = False,
+        allow_insecure_loopback: bool = False,
+    ) -> None:
+        self.name, self.spec = name, spec
         u = urlsplit(spec.token_url)
         host = (u.hostname or "").lower()
         if u.scheme not in ("https", "http") or not host or u.username or u.password:
             raise SpecError(
-                f"mcp {src.name}: oauth.token_url must be an http(s) URL with a host and no credentials"
+                f"mcp {self.name}: oauth.token_url must be an http(s) URL with a host and no credentials"
             )
-        if u.scheme == "http" and not (src.allow_insecure_loopback and host in LOOPBACK):
+        if u.scheme == "http" and not (allow_insecure_loopback and host in LOOPBACK):
             raise SpecError(
-                f"mcp {src.name}: oauth.token_url must be https (plain http only to loopback with allow_insecure_loopback)"
+                f"mcp {self.name}: oauth.token_url must be https (plain http only to loopback with allow_insecure_loopback)"
             )
         if not any(
             host == h.lower() or (h.startswith("*.") and host.endswith(h[1:].lower()))
             for h in spec.token_hosts
         ):
             raise SpecError(
-                f"mcp {src.name}: the token endpoint host {host!r} is not in oauth.token_hosts"
+                f"mcp {self.name}: the token endpoint host {host!r} is not in oauth.token_hosts"
             )
         self._host = host
         self._id = (
-            _secret(spec.client_id, f"mcp {src.name} oauth.client_id")
+            _secret(spec.client_id, f"mcp {self.name} oauth.client_id")
             if spec.client_id.startswith(("env:", "${"))
             else None
         )
         self._client_id = spec.client_id
-        self._secret = _secret(spec.client_secret, f"mcp {src.name} oauth.client_secret")
+        self._secret = _secret(spec.client_secret, f"mcp {self.name} oauth.client_secret")
         self._id_value()  # a missing variable is a startup error
         self._secret.value()
         self._fetcher = SafeFetcher(
@@ -81,7 +88,7 @@ class OAuthTokens:
                 timeout_s=spec.timeout_s,
                 connect_timeout_s=min(spec.timeout_s, 10.0),
                 content_types=("application/json",),
-                allow_private_networks=src.allow_private_networks
+                allow_private_networks=allow_private_networks
                 or (u.scheme == "http" and host in LOOPBACK),
             )
         )
@@ -91,7 +98,7 @@ class OAuthTokens:
         self.fetches = 0
 
     def __repr__(self) -> str:
-        return f"OAuthTokens({self.src.name!r}, token={'held' if self._token else 'none'})"
+        return f"OAuthTokens({self.name!r}, token={'held' if self._token else 'none'})"
 
     def _id_value(self) -> str:
         return self._id.value() if self._id is not None else self._client_id
@@ -152,7 +159,7 @@ class OAuthTokens:
                 "could not obtain an access token from the authorization server"
             ) from None
         except (FetchBlocked, ValueError, TypeError, AttributeError):
-            log.warning("oauth %s: the token request failed", self.src.name)
+            log.warning("oauth %s: the token request failed", self.name)
             raise OAuthError(
                 "could not obtain an access token from the authorization server"
             ) from None
