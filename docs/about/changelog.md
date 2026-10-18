@@ -43,6 +43,14 @@
 - The GitHub repository is `innerkorehq/AutonomousAgentArchitecture` and the documentation is at <https://innerkorehq.github.io/AutonomousAgentArchitecture/>. The old repository address redirects; the old documentation address does not.
 - **The import name is unchanged: `import aaa`.** No code changes are needed beyond the package name in your requirements. The code is otherwise identical to 0.3.0.
 
+## aaa-server 0.2.0 (2026-10-18)
+
+Requires `autonomous-agent-architecture>=0.5.0`.
+
+- `POST /v1/runs/{id}/answers` and the new `answer` scope: a person answers the question an [`AskHuman`](../guides/algorithms/multi-agent-human.md) run is waiting on. Tenant-scoped like every run endpoint, only the outstanding question is accepted (once), the answerer is recorded, and the event stream shows `human.requested` (the question, never the answer).
+- `POST /mcp` applies the caller's API-key scopes to per-tool policy: a tool restricted by `scopes` in an MCP server configuration is listed and callable only for keys that hold one of them, and answers like an unknown tool otherwise.
+- `SCOPE_ANSWER` is part of `ALL_SCOPES`.
+
 ## aaa-server 0.1.0 (2026-10-16)
 
 First release of the separate [`aaa-server`](../server/index.md) package (it requires `autonomous-agent-architecture>=0.3.1`). Everything in the "HTTP server" and "MCP server and A2A" entries under 0.3.0 below ships here, plus: `POST /mcp` and the experimental A2A endpoint, the `Dockerfile`/`compose.yaml` deployment, and the fix that builds an `async` factory inside the server's own event loop.

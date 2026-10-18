@@ -1,6 +1,6 @@
 [project]
 name = "aaa-server"
-version = "0.2.0.dev0"
+version = "0.2.0"
 description = "HTTP/SSE server for AAA agents: authentication, tenant isolation, rate limits, quotas, approvals."
 readme = "README.md"
 license = "MIT"
