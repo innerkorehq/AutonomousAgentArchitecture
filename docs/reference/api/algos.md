@@ -44,6 +44,28 @@
 
 ::: aaa.algos.AdaptiveRAG
 
+::: aaa.algos.SkillLibrary
+
+::: aaa.algos.Skill
+
+::: aaa.algos.skill_tools
+
+::: aaa.algos.VoyagerAgent
+
+::: aaa.algos.MemoryReflection
+
+::: aaa.algos.rank_memories
+
+::: aaa.algos.SelfManagedMemory
+
+::: aaa.algos.self_memory_tools
+
+::: aaa.optimize.optimize_prompt
+
+::: aaa.optimize.OptimizeResult
+
+::: aaa.optimize.split_dataset
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route

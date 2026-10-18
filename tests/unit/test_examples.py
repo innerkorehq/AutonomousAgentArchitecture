@@ -128,6 +128,13 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "memory_algorithms.py": [
+        "skills: stored add_numbers | a failing test is refused | AssertionError",
+        "skills: run -> 42 | other tenant sees []",
+        "reflection: Ann is building a bakery in Lisbon. | sources ['m1', 'm0'] | stored 1",
+        "self-managed: True (the next run starts with what the model chose to keep)",
+        "optimise: 'Think step by step.' | dev 0.0 -> 1.0, held-out 0.0 -> 1.0 | improved: True",
+    ],
     "retrieval_algorithms.py": [
         "corrective: Answered from web:w1 | route web | sources ['web:w1']",
         "corrective: Answered from fr | route index | graded 2 passages",

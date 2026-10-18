@@ -31,6 +31,11 @@ flowchart TD
     Q -->|Plan every tool call first| PF{Can it react?}
     PF -->|No: cheapest| RW[ReWOO]
     PF -->|Yes: a joiner may replan| LC[LLMCompiler]
+    Q -->|Learn and reuse what worked| LR{What?}
+    LR -->|Verified code skills| VY[VoyagerAgent]
+    LR -->|Insights from recent memories| MR[MemoryReflection]
+    LR -->|The model manages its own memory| SM[SelfManagedMemory]
+    LR -->|A better prompt, from evals| OP[aaa.optimize]
     Q -->|Answer from my documents, checked| RC{What matters?}
     RC -->|Grade passages, fall back to web| CRG[CorrectiveRAG]
     RC -->|One answer per passage, judge support| SRG[SelfRAG]
@@ -61,6 +66,9 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`VoyagerAgent`](memory-self-improvement.md) | the model, with verified skills | per turn | `library`, `requires_approval`, `max_turns` | `{"text", "turns"}` |
+| [`MemoryReflection`](memory-self-improvement.md) | an importance threshold, then the model | `window + 1 + questions` at most | `window`, `threshold`, `questions` | `{"reflected", "importance", "questions", "insights", "written"}` |
+| [`SelfManagedMemory`](memory-self-improvement.md) | the model, via memory tools | per turn | `blocks`, `extra_tools` | `{"text", "turns"}` |
 | [`CorrectiveRAG`](rag-checked.md) | grades per passage | `(rewrites + 1) * k + rewrites + k + 1` at most | `index`, `k`, `web_tool`, `min_relevant`, `max_rewrites` | `{"text", "sources", "queries", "route", "graded"}` |
 | [`SelfRAG`](rag-checked.md) | per-passage judgments | `adaptive + 2 * candidates * (rewrites + 1) + rewrites` at most | `adaptive`, `max_candidates`, `max_rewrites` | `{"text", "source", "supported", "useful", "queries", "rounds", "route"}` |
 | [`AdaptiveRAG`](rag-checked.md) | a routing call | `max_hops + 2` at most | `max_hops` | `{"text", "route", "hops", "sources", "queries"}` |
