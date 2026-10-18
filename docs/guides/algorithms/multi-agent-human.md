@@ -50,7 +50,7 @@ await handle.signal("aaa.human.answered", {"question_id": asked.data["question_i
 - Only an `aaa.human.answered` event counts, and model output is never an event of that type. An answer counts for the **outstanding** question only, **once**; stray, repeated or early answers are ignored. Answers are capped at 2000 characters and are data in the next prompt, never instructions.
 - After `max_questions` the model must answer. Result `{"answer", "questions", "asked"}`.
 - There is no timer inside an algorithm: bound the wait with `Budget(deadline_s=...)`; the run then ends `TIMEOUT`.
-- **Who may signal a run is the host's decision.** In your own code it is whoever holds the handle. This release adds no `aaa-server` endpoint for it; when you add one, restrict it to principals of the run's tenant with an approval-level scope, as for tool approvals.
+- **Who may signal a run is the host's decision.** In your own code it is whoever holds the handle. Behind `aaa-server`, use `POST /v1/runs/{id}/answers` with `{"question_id": "q0", "answer": "4"}`: it needs the separate `answer` scope, applies to your tenant's runs only, accepts the outstanding question once (`409` otherwise), and records who answered. The question itself arrives on the event stream as `human.requested`; the answer is not broadcast.
 
 ## Choosing
 

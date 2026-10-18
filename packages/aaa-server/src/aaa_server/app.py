@@ -23,6 +23,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
+from aaa.algos.human import HUMAN_ANSWERED, HUMAN_REQUESTED
 from aaa.core.ids import new_id
 from aaa.events import Event
 from aaa.llm.parts import Part
@@ -43,6 +44,7 @@ from .a2a import A2AConfig, A2AEndpoint
 from .admission import ConcurrencyLimiter, Denied, Quota, QuotaStore, RateLimiter
 from .auth import (
     SCOPE_ADMIN,
+    SCOPE_ANSWER,
     SCOPE_APPROVE,
     SCOPE_RUN,
     SCOPE_SESSION,
@@ -93,6 +95,12 @@ def default_event_view(e: Event) -> dict[str, Any] | None:
                 "name": d.get("name"),
                 "call_id": d.get("call_id"),
                 "arguments": _clip(d.get("arguments", {})),
+            }
+        case "aaa.human.requested":
+            return {
+                "type": "human.requested",
+                "question_id": d.get("question_id"),
+                "question": _clip(d.get("question", "")),
             }
         case "aaa.session.reply":
             return {"type": "session.reply", "turn": d.get("turn"), "text": d.get("text")}
@@ -146,6 +154,11 @@ class ApprovalRequest(_Strict):
     call_id: str = Field(max_length=256)
     decision: Literal["grant", "deny"]
     reason: str | None = Field(None, max_length=500)
+
+
+class AnswerRequest(_Strict):
+    question_id: str = Field(max_length=64)
+    answer: str = Field(max_length=2000)
 
 
 class SessionRequest(_Strict):
@@ -451,6 +464,26 @@ class ServerApp:
         )
         return JSONResponse({"call_id": req.call_id, "decision": req.decision}, 202)
 
+    async def answer_question(self, request: Request, p: Principal) -> Response:
+        """A person's answer to the question an `AskHuman` run is waiting on. Like approvals: its own scope, the run's own tenant, and only the
+        outstanding question, once, is accepted."""
+        h = await self.engine.tenant(p.tenant).handle(request.path_params["run_id"])
+        req: AnswerRequest = await self._body(request, AnswerRequest)
+        asked, answered = set(), set()
+        for e in await self.engine.store.read(h.run_id):
+            if e.type == HUMAN_REQUESTED:
+                asked.add(str(e.data.get("question_id")))
+            elif e.type == HUMAN_ANSWERED:
+                answered.add(str(e.data.get("question_id")))
+        if req.question_id not in asked or req.question_id in answered:
+            raise _Reply(
+                409, "no_pending_question", "no question is waiting for an answer with that id"
+            )
+        await h.signal(
+            HUMAN_ANSWERED, {"question_id": req.question_id, "answer": req.answer, "by": p.subject}
+        )
+        return JSONResponse({"question_id": req.question_id}, 202)
+
     # -- endpoints: event stream -------------------------------------------------------------
     def _stream_response(
         self,
@@ -668,6 +701,7 @@ def create_app(cfg: ServerConfig, *, manage_engine: bool = False) -> Starlette:
         Route(
             "/v1/runs/{run_id}/approvals", r(SCOPE_APPROVE, app.resolve_approval), methods=["POST"]
         ),
+        Route("/v1/runs/{run_id}/answers", r(SCOPE_ANSWER, app.answer_question), methods=["POST"]),
         Route("/v1/sessions", r(SCOPE_SESSION, app.create_session), methods=["POST"]),
         Route("/v1/sessions", r(SCOPE_SESSION, app.list_sessions), methods=["GET"]),
         Route("/v1/sessions/{session_id}", r(SCOPE_SESSION, app.get_session), methods=["GET"]),

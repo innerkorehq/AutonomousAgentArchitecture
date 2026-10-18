@@ -17,9 +17,10 @@ from aaa.runtime.tenancy import valid_tenant
 
 SCOPE_RUN = "run"  # start runs, read events, cancel
 SCOPE_APPROVE = "approve"  # resolve tool approvals (a separate, rarer privilege)
+SCOPE_ANSWER = "answer"  # answer the questions an `AskHuman` run is waiting on (separate from approving tool calls)
 SCOPE_SESSION = "session"  # sessions and their messages
 SCOPE_ADMIN = "admin"  # read the tenant's usage and quota
-ALL_SCOPES = frozenset({SCOPE_RUN, SCOPE_APPROVE, SCOPE_SESSION, SCOPE_ADMIN})
+ALL_SCOPES = frozenset({SCOPE_RUN, SCOPE_APPROVE, SCOPE_ANSWER, SCOPE_SESSION, SCOPE_ADMIN})
 
 
 class AuthError(Exception):
@@ -240,6 +241,7 @@ class JWTAuthenticator:
 __all__ = [
     "ALL_SCOPES",
     "SCOPE_ADMIN",
+    "SCOPE_ANSWER",
     "SCOPE_APPROVE",
     "SCOPE_RUN",
     "SCOPE_SESSION",

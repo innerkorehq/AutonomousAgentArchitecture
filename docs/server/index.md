@@ -60,6 +60,7 @@ A complete, runnable, offline version (including an approval over HTTP and a sec
 | **Admission control** | Token-bucket rate limits (in-memory or Redis), event-sourced daily quotas with race-free reservation, open-run and stream caps, a body-size limit. |
 | **Runs and streams** | Idempotent `POST /v1/runs`, cancel, and server-sent events that resume with `Last-Event-ID`. The stream is a filtered projection of the log, never the raw log. |
 | **Human approval** | `POST /v1/runs/{id}/approvals` with its own `approve` scope; only a call that is currently pending can be approved. |
+| **Human answers** | `POST /v1/runs/{id}/answers` with its own `answer` scope, for [`AskHuman`](../guides/algorithms/multi-agent-human.md) runs; only the outstanding question, once, is accepted. |
 | **Sessions** | Create, send (blocking or streamed), list, close; attachments are the library's multimodal parts. |
 | **MCP and A2A** | `POST /mcp` serves your tools to any MCP client under the same auth; `A2AConfig` serves an algorithm as an A2A 1.0 agent (experimental). |
 

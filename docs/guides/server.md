@@ -58,7 +58,7 @@ request body that names `tenant`, `user`, `meta` or `run_id` is rejected with `4
 
 Write your own by implementing `Authenticator.authenticate(headers) -> Principal`. Failures are always the same `401` with `WWW-Authenticate: Bearer`; the reason goes to the server log only.
 
-Scopes: `run` (start, read, cancel), `approve` (resolve tool approvals), `session`, `admin` (read usage).
+Scopes: `run` (start, read, cancel), `approve` (resolve tool approvals), `answer` (answer the questions an `AskHuman` run is waiting on), `session`, `admin` (read usage).
 
 ## Endpoints
 
