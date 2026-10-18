@@ -99,6 +99,7 @@ nav:
           - Plan-first and delegating algorithms: guides/algorithms/plan-first.md
           - Corrective, Self- and Adaptive RAG: guides/algorithms/rag-checked.md
           - Memory and self-improvement: guides/algorithms/memory-self-improvement.md
+          - Multi-agent coordination and asking a person: guides/algorithms/multi-agent-human.md
           - Writing your own: guides/algorithms/custom.md
       - Persistence and recovery: guides/persistence.md
       - Running a cluster: guides/clusters.md

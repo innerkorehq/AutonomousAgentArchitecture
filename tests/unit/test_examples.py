@@ -128,6 +128,14 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "multi_agent_algorithms.py": [
+        "mixture: Paris, the capital of France (3 proposers agreed) | layers [3, 3]",
+        "blackboard: Launch on Tuesday, after the fix. | board ['researcher', 'critic']",
+        "auction: winner expert | Done by the best-value bidder.",
+        "protocol: {'approved': True, 'notes': 'three steps, fine'} | analyst document {'title': 'Migrate', 'steps': ['freeze', 'copy', 'switch']}",
+        "human: the run is waiting on 'For how many people?'",
+        "human: Table booked for 4. | asked 1",
+    ],
     "memory_algorithms.py": [
         "skills: stored add_numbers | a failing test is refused | AssertionError",
         "skills: run -> 42 | other tenant sees []",

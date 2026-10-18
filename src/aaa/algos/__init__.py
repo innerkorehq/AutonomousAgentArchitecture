@@ -5,9 +5,12 @@ from aaa.algos.decompose import LeastToMost, SelfAsk
 from aaa.algos.ensemble import RAGAgent, SelfConsistency, Supervisor
 from aaa.algos.got import GraphOfThoughts, Op
 from aaa.algos.hier import HierarchicalAgent
+from aaa.algos.human import AskHuman
 from aaa.algos.lats import LATS
 from aaa.algos.loops import LLMLoop, ReAct, RecallConfig, ToolLoop
+from aaa.algos.market import Auction
 from aaa.algos.memgpt import SelfManagedMemory, self_memory_tools
+from aaa.algos.moa import Blackboard, MixtureOfAgents
 from aaa.algos.plan import Plan, PlanAndExecute, Step
 from aaa.algos.rag2 import AdaptiveRAG, CorrectiveRAG, SelfRAG
 from aaa.algos.refine import GenerateTestRepair, GeneratorCritic
@@ -15,6 +18,7 @@ from aaa.algos.reflect import MemoryReflection, rank_memories, reflection_tools
 from aaa.algos.reflexion import Reflexion
 from aaa.algos.route import Route, Router
 from aaa.algos.skills import Skill, SkillLibrary, VoyagerAgent, skill_tools
+from aaa.algos.sop import Role, RolePlaySOP
 from aaa.algos.swarm import Agent, Swarm
 from aaa.algos.toolplan import ReWOO
 from aaa.algos.tot import TreeOfThoughts
@@ -25,7 +29,10 @@ __all__ = [
     "LATS",
     "AdaptiveRAG",
     "Agent",
+    "AskHuman",
+    "Auction",
     "BestOfN",
+    "Blackboard",
     "ChainOfVerification",
     "CorrectiveRAG",
     "Debate",
@@ -37,6 +44,7 @@ __all__ = [
     "LLMLoop",
     "LeastToMost",
     "MemoryReflection",
+    "MixtureOfAgents",
     "Node",
     "Op",
     "Plan",
@@ -46,6 +54,8 @@ __all__ = [
     "ReWOO",
     "RecallConfig",
     "Reflexion",
+    "Role",
+    "RolePlaySOP",
     "Route",
     "Router",
     "SelfAsk",

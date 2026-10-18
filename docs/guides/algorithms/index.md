@@ -31,6 +31,12 @@ flowchart TD
     Q -->|Plan every tool call first| PF{Can it react?}
     PF -->|No: cheapest| RW[ReWOO]
     PF -->|Yes: a joiner may replan| LC[LLMCompiler]
+    Q -->|Several agents together| MA{How do they coordinate?}
+    MA -->|Layers refine each other's answers| MOA[MixtureOfAgents]
+    MA -->|Shared board, a chair picks who writes| BB[Blackboard]
+    MA -->|They bid, the best bid wins| AU[Auction]
+    MA -->|Roles hand over typed documents| SOP[RolePlaySOP]
+    Q -->|It may need to ask a person| AH[AskHuman]
     Q -->|Learn and reuse what worked| LR{What?}
     LR -->|Verified code skills| VY[VoyagerAgent]
     LR -->|Insights from recent memories| MR[MemoryReflection]
@@ -66,6 +72,11 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`MixtureOfAgents`](multi-agent-human.md) | layers, then an aggregator | `proposers * layers + 1` | `proposers`, `layers`, `personas`, `models` | `{"answer", "layers"}` |
+| [`Blackboard`](multi-agent-human.md) | a chair model, among your experts | `2 * max_rounds + 1` at most | `experts`, `max_rounds` | `{"answer", "board", "rounds"}` |
+| [`Auction`](multi-agent-human.md) | bids, awarded by a rule in code | one bid per worker + the winner's run | `workers`, `rule`, `fallback`, `child_budget` | `{"text", "winner", "tried", "bids"}` |
+| [`RolePlaySOP`](multi-agent-human.md) | your roles and their document types | `roles * (repairs + 1)` at most | `roles`, `max_repairs` | `{"document", "documents", "roles", "repairs"}` |
+| [`AskHuman`](multi-agent-human.md) | the model, and a person | `max_questions + 1` at most | `max_questions` | `{"answer", "questions", "asked"}` |
 | [`VoyagerAgent`](memory-self-improvement.md) | the model, with verified skills | per turn | `library`, `requires_approval`, `max_turns` | `{"text", "turns"}` |
 | [`MemoryReflection`](memory-self-improvement.md) | an importance threshold, then the model | `window + 1 + questions` at most | `window`, `threshold`, `questions` | `{"reflected", "importance", "questions", "insights", "written"}` |
 | [`SelfManagedMemory`](memory-self-improvement.md) | the model, via memory tools | per turn | `blocks`, `extra_tools` | `{"text", "turns"}` |

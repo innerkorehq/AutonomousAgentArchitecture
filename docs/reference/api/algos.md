@@ -66,6 +66,18 @@
 
 ::: aaa.optimize.split_dataset
 
+::: aaa.algos.MixtureOfAgents
+
+::: aaa.algos.Blackboard
+
+::: aaa.algos.Auction
+
+::: aaa.algos.RolePlaySOP
+
+::: aaa.algos.Role
+
+::: aaa.algos.AskHuman
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route
