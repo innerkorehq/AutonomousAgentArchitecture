@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable, Mapping
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from aaa.core.outcome import OutcomeKind
-from aaa.events import Event
-from aaa.llm.types import LLMRequest, Message
+from aaa.events import Event, Projection
+from aaa.llm.types import LLMRequest, LLMResponse, Message
 
 
 def llm_request(
@@ -97,3 +100,89 @@ def task_messages(inp: dict[str, Any], system: str) -> list[Message]:
         ]
     msgs.append(Message.model_validate(user))
     return msgs
+
+
+# -- tagged calls: the fold most multi-call algorithms need ------------------------------------------
+class Calls(BaseModel):
+    """What the model and the tools have answered so far, by tag (model calls) or call id (tool calls).
+
+    An algorithm built on this keeps no state of its own: every decision is a pure function of `Calls`, so a replay and a
+    different completion order give the same run."""
+
+    input: dict[str, Any] = Field(default_factory=dict)
+    texts: dict[str, str] = Field(default_factory=dict)  # tag -> reply text
+    results: dict[str, Any] = Field(default_factory=dict)  # tool call id -> result
+    failed: list[str] = Field(default_factory=list)  # tags / call ids that failed
+
+    def done(self, key: str) -> bool:
+        return key in self.texts or key in self.results or key in self.failed
+
+    def all_done(self, keys: Iterable[str]) -> bool:
+        return all(self.done(k) for k in keys)
+
+    def text(self, key: str) -> str:
+        return self.texts.get(key, "")
+
+
+def _apply_calls(st: Calls, e: Event) -> Calls:
+    d = e.data
+    if e.type == "aaa.run.started":
+        st.input = d["input"]
+    elif e.type == "aaa.llm.completed":
+        st.texts[str(d.get("tag", ""))] = (
+            LLMResponse.model_validate(d["response"]).message.content or ""
+        )
+    elif e.type == "aaa.llm.failed":
+        st.failed.append(str(d.get("tag", "")))
+    elif e.type == "aaa.tool.completed":
+        st.results[d["call_id"]] = d["result"]
+    elif e.type == "aaa.tool.failed":
+        st.failed.append(d["call_id"])
+    return st
+
+
+CALLS = Projection(Calls, _apply_calls, name="aaa.calls", version=1, state_type=Calls)
+
+
+def ask(
+    e: Event,
+    algo: str,
+    tag: str,
+    messages: list[Message],
+    *,
+    model: str | None = None,
+    params: dict[str, Any] | None = None,
+    schema: dict[str, Any] | None = None,
+) -> Event:
+    """One tagged model call with an id fixed by the run, `algo` and `tag`: asking again for the same tag is dropped by the store,
+    so a driver may re-issue every call whose inputs are ready without ever making a call twice."""
+    req = LLMRequest(model=model, messages=messages, params=params or {}, response_schema=schema)
+    return stable(llm_request(e, req, tag), f"{algo}:{tag}")
+
+
+def task_text(inp: Mapping[str, Any]) -> str:
+    """The task as plain text (the last user message when `messages` were given)."""
+    return task_messages(dict(inp), "")[-1].content or ""
+
+
+def clamp_score(text: str, lo: float = 0.0, hi: float = 10.0) -> float | None:
+    """A `{"score": number}` reply as a number in [lo, hi]; `None` when the reply is not usable."""
+    obj = parse_json_obj(text)
+    try:
+        return max(lo, min(hi, float((obj or {})["score"])))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+SCORE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"score": {"type": "number"}},
+    "required": ["score"],
+    "additionalProperties": False,
+}
+
+
+def data_block(label: str, text: str) -> str:
+    """Text the model should treat as quoted material, not as instructions: `<label> ... </label>`. Text is stripped of the closing tag so
+    it cannot end its own quote."""
+    return f"<{label}>\n{text.replace(f'</{label}>', '')}\n</{label}>"

@@ -128,6 +128,15 @@ EXPECTED = {
         "red team: attack success 90%, false positives 0%",
         "conversation: 2 turns; contains help = True",
     ],
+    "verification_algorithms.py": [
+        "self-refine: 42 km (units added) after 1 rewrite; accepted",
+        "verification: The capital of Australia is Canberra. | draft was: The capital of Australia is Sydney.",
+        "best-of-n: the longest answer of all | scores [5.0, 10.0, 15.0, 25.0]",
+        "least-to-most: 12 via ['Legs per dog?', 'How many dogs?']",
+        "self-ask: 1969. after 1 follow-up",
+        "graph-of-thoughts: a+b from 11 thoughts; 9 calls at most",
+        "lats: 24 | path ['step 1: 8 / (3 - 8 / 3)', 'FINAL: 24'] | solved True",
+    ],
     "mcp_everything.py": [
         "title: Everything (production)",
         "tools: ['getOrder', 'up_shout', 'word_count']",

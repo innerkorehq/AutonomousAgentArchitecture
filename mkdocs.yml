@@ -95,6 +95,7 @@ nav:
           - WorkflowGraph and FSM: guides/algorithms/workflow-fsm.md
           - SelfConsistency and RAG: guides/algorithms/ensembles-rag.md
           - Reflexion, Debate, Swarm, Tree-of-thoughts: guides/algorithms/reasoning.md
+          - Verification, decomposition and search: guides/algorithms/verify-search.md
           - Writing your own: guides/algorithms/custom.md
       - Persistence and recovery: guides/persistence.md
       - Running a cluster: guides/clusters.md

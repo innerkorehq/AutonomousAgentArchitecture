@@ -234,15 +234,23 @@ def to_toml(data: dict[str, Any]) -> str:
 
 
 def dump_spec(spec: MCPSpec, path: str | os.PathLike[str] | None = None) -> str:
-    """The spec as text in the format `path`'s extension names (JSON if no path). Defaults are left out, so the file says only what you chose.
-    Specs with `live` sources refer to Python objects a file cannot carry, so they cannot be written."""
+    """The spec as text in the format `path`'s extension names (JSON if no path), written to `path` when one is given. Defaults are left
+    out, so the file says only what you chose. Specs with `live` sources refer to Python objects a file cannot carry, so they cannot be written."""
+    text = spec_text(spec, Path(path).suffix if path else ".json")
+    if path is not None:
+        Path(path).write_text(text)
+    return text
+
+
+def spec_text(spec: MCPSpec, suffix: str = ".json") -> str:
+    """The spec as text in the format a file extension (`.toml`, `.yaml`, `.yml`, `.json`) names, without writing anything."""
     if any(src.type == "live" for src in spec.sources):
         raise SpecError(
             "this configuration holds live Python objects (type = 'live'), which a file cannot carry"
         )
     data = spec.model_dump(mode="json", exclude_defaults=True, exclude_none=True)
     data = {"version": 1, **{k: v for k, v in data.items() if k != "version"}}
-    suffix = Path(path).suffix.lower() if path else ".json"
+    suffix = suffix.lower()
     if suffix == ".toml":
         text = to_toml(data)
     elif suffix in (".yaml", ".yml"):
@@ -259,8 +267,6 @@ def dump_spec(spec: MCPSpec, path: str | os.PathLike[str] | None = None) -> str:
         raise SpecError(
             f"unknown configuration format {suffix!r} (use .yaml, .yml, .json or .toml)"
         )
-    if path is not None:
-        Path(path).write_text(text)
     return text
 
 

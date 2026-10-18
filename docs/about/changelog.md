@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- New algorithms (programme A1): `SelfRefine`, `ChainOfVerification`, `BestOfN` (verifier: pure scorer, tool or model judge), `LeastToMost`, `SelfAsk` (optionally with a lookup tool), `GraphOfThoughts` (a validated graph of generate/aggregate/refine/score/keep_best operations) and `LATS` (UCT tree search with reflections). All are event-sourced, bounded at construction with a known `max_calls`, and independent of the order parallel calls finish in. `aaa.algos.base` gains the shared `Calls` projection and `ask`, `task_text`, `clamp_score`, `data_block` helpers (additive).
+- Fixed: `aaa mcp init` / `export` (and `scaffold.config_text_for`) left a stray `x.<format>` file in the working directory, because `dump_spec` was given a file name only to choose a format. New `aaa.mcp.config.spec_text(spec, suffix)` renders without writing; `dump_spec` is unchanged for callers.
 - Docs: [threat model for the additional algorithms](../security/algorithms.md) (written ahead of the code) and a pre-ship checklist for custom algorithms.
 
 ## 0.4.0 (2026-10-18)

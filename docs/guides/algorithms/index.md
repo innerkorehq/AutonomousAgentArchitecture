@@ -24,6 +24,15 @@ flowchart TD
     Q -->|Several views, then a ruling| DB[Debate]
     Q -->|Hand off between specialists| SW[Swarm]
     Q -->|Search over reasoning steps| TT[TreeOfThoughts]
+    Q -->|Check or improve a draft| VF{How?}
+    VF -->|Critique itself| SRF[SelfRefine]
+    VF -->|Fact-check questions| COV[ChainOfVerification]
+    VF -->|Score N samples| BON[BestOfN]
+    Q -->|Break the question down| DC{How?}
+    DC -->|Easy sub-questions first| L2M[LeastToMost]
+    DC -->|Ask follow-ups, maybe a tool| SA[SelfAsk]
+    Q -->|Merge and refine thoughts| GOT[GraphOfThoughts]
+    Q -->|Tree search with lessons| LT[LATS]
 ```
 
 ## At a glance
@@ -44,6 +53,13 @@ flowchart TD
 | [`Reflexion`](reasoning.md) | your validator or a critic | attempt + evaluation + reflection per trial | `validator`, `max_trials` | `{"candidate", "trials", "reflections"}` |
 | [`Debate`](reasoning.md) | vote or a judge | `agents * (rounds + 1)` (+1) | `agents`, `rounds`, `judge`, `personas` | `{"answer", "rounds", "agents", "answers", "judged"}` |
 | [`Swarm`](reasoning.md) | the model, via transfer tools | per turn | `agents`, `start`, `max_handoffs` | `{"text", "turns", "agent", "handoffs"}` |
+| [`SelfRefine`](verify-search.md) | the model critiques itself | `2 * rounds + 2` at most | `max_rounds` | `{"answer", "rounds", "stopped"}` |
+| [`ChainOfVerification`](verify-search.md) | independent check questions | `3 + max_questions` at most | `max_questions` | `{"answer", "draft", "checks", "revised"}` |
+| [`BestOfN`](verify-search.md) | a verifier (code, tool or model) | `n` (+ `n` judge calls) | `n`, `score`, `verifier_tool`, `threshold` | `{"answer", "score", "scores", "selected", "n", "early_stop"}` |
+| [`LeastToMost`](verify-search.md) | the model, sub-question by sub-question | `max_subquestions + 2` at most | `max_subquestions` | `{"answer", "steps"}` |
+| [`SelfAsk`](verify-search.md) | the model, via follow-ups | up to `2 * max_followups + 1` | `max_followups`, `lookup_tool` | `{"answer", "followups", "turns"}` |
+| [`GraphOfThoughts`](verify-search.md) | your graph of operations | known up front (`max_calls`) | `ops` | `{"answer", "score", "thoughts", "operations"}` |
+| [`LATS`](verify-search.md) | UCT and scores, in code | up to `3 * iterations * branching` | `iterations`, `branching`, `depth_limit`, `solved_score` | `{"answer", "score", "path", "solved", ...}` |
 | [`TreeOfThoughts`](reasoning.md) | scores, in code | up to `2 * depth * width * branching` | `depth`, `width`, `branching`, `stop_score` | `{"answer", "score", "path", "depth", "explored"}` |
 
 ## Rules of thumb
@@ -52,6 +68,8 @@ flowchart TD
   predictable than asking a model to rediscover them. Use the LLM where judgement is needed and code elsewhere.
 - **Verify with code before verifying with a model.** `GenerateTestRepair` with a real check (a schema, a unit test,
   a business rule) beats `GeneratorCritic` whenever you *can* write the check.
+- **A model checking itself is weak evidence.** `SelfRefine` shares the writer's blind spots; `ChainOfVerification` is better at facts
+  because the checks are answered without the draft in view; `BestOfN` with a code or tool verifier is better still.
 - **Voting is for exact answers.** `SelfConsistency` helps when answers can be compared (numbers, labels, extracted
   fields). It does not help with free-form prose.
 - **Plans cost latency.** `PlanAndExecute` pays for planning and synthesis calls. It earns that back when steps run in

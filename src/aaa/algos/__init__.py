@@ -1,6 +1,9 @@
 from aaa.algos.control import FSM, Node, WorkflowGraph
 from aaa.algos.debate import Debate
+from aaa.algos.decompose import LeastToMost, SelfAsk
 from aaa.algos.ensemble import RAGAgent, SelfConsistency, Supervisor
+from aaa.algos.got import GraphOfThoughts, Op
+from aaa.algos.lats import LATS
 from aaa.algos.loops import LLMLoop, ReAct, RecallConfig, ToolLoop
 from aaa.algos.plan import Plan, PlanAndExecute, Step
 from aaa.algos.refine import GenerateTestRepair, GeneratorCritic
@@ -8,15 +11,22 @@ from aaa.algos.reflexion import Reflexion
 from aaa.algos.route import Route, Router
 from aaa.algos.swarm import Agent, Swarm
 from aaa.algos.tot import TreeOfThoughts
+from aaa.algos.verify import BestOfN, ChainOfVerification, SelfRefine
 
 __all__ = [
     "FSM",
+    "LATS",
     "Agent",
+    "BestOfN",
+    "ChainOfVerification",
     "Debate",
     "GenerateTestRepair",
     "GeneratorCritic",
+    "GraphOfThoughts",
     "LLMLoop",
+    "LeastToMost",
     "Node",
+    "Op",
     "Plan",
     "PlanAndExecute",
     "RAGAgent",
@@ -25,7 +35,9 @@ __all__ = [
     "Reflexion",
     "Route",
     "Router",
+    "SelfAsk",
     "SelfConsistency",
+    "SelfRefine",
     "Step",
     "Supervisor",
     "Swarm",

@@ -16,6 +16,22 @@
 
 ::: aaa.algos.Step
 
+::: aaa.algos.SelfRefine
+
+::: aaa.algos.ChainOfVerification
+
+::: aaa.algos.BestOfN
+
+::: aaa.algos.LeastToMost
+
+::: aaa.algos.SelfAsk
+
+::: aaa.algos.GraphOfThoughts
+
+::: aaa.algos.Op
+
+::: aaa.algos.LATS
+
 ::: aaa.algos.Router
 
 ::: aaa.algos.Route
