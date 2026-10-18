@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Self
 from aaa.mcp.config import SpecError
 from aaa.mcp.filters import Entry, rename, select, with_name
 from aaa.mcp.model import MCPAnnotations, MCPToolMeta
-from aaa.mcp.policy import ToolRule
+from aaa.mcp.policy import Profile, ProfileSet, ToolRule
 from aaa.mcp.server import ApprovalCallback, MCPToolServer
 from aaa.mcp.sources.agents import AgentTool, check_spec
 from aaa.mcp.sources.mcp_upstream import Upstream, start_upstream, subprocess_allowed
@@ -109,6 +109,24 @@ def _rules(spec: MCPSpec, names: list[str]) -> dict[str, ToolRule]:
         if rule != ToolRule():
             out[n] = rule
     return out
+
+
+def _profiles(spec: MCPSpec, names: list[str]) -> ProfileSet | None:
+    """Profiles as the server enforces them. A tool glob that selects nothing is an error (a typo would otherwise hide a tool from the audience that should see it)."""
+    if not spec.profiles:
+        return None
+    for pname, prof in spec.profiles.items():
+        for g in prof.tools:
+            if not any(fnmatch.fnmatchcase(n, g) for n in names):
+                raise SpecError(f"profiles.{pname}: tools glob {g!r} selects no exposed tool")
+    return ProfileSet(
+        {
+            n: Profile(tuple(p.tools), tuple(p.resources), tuple(p.prompts))
+            for n, p in spec.profiles.items()
+        },
+        default=spec.tenancy.profile,
+        required=spec.tenancy.profiles_required,
+    )
 
 
 async def _resources(
@@ -395,6 +413,7 @@ async def _compile(
         )
     registry = ToolRegistry([e.tool for e in final])
     rules = _rules(spec, [e.tool.name for e in final])
+    profiles = _profiles(spec, [e.tool.name for e in final])
     resources = await _resources(spec, live, upstream_providers)
     prompts: dict[str, Any] = {p.name: PromptDef(p) for p in spec.prompts}
     if len(prompts) != len(spec.prompts):
@@ -422,6 +441,7 @@ async def _compile(
         prompts=prompts,
         tool_policy=rules,
         default_scopes=spec.tenancy.scopes,
+        profiles=profiles,
     )
     core.spec = spec
     core.owns_engine = owns_engine
@@ -473,6 +493,10 @@ def describe(core: CompiledServer) -> dict[str, Any]:
         ],
         "prompts": wire.prompts_list_result(core.list_prompts())["prompts"],
         "hidden": core.hidden,
+        "profiles": {
+            n: {"tools": list(p.tools), "resources": list(p.resources), "prompts": list(p.prompts)}
+            for n, p in (core.profiles.profiles.items() if core.profiles else [])
+        },
         "policies": {
             n: {
                 k: (sorted(v) if isinstance(v, frozenset) else v)

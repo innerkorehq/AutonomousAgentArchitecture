@@ -377,6 +377,37 @@ tenants = ["acme"]
 * Rate-limit and concurrency refusals are tool errors with a fixed message (`... retry shortly`) that does not say how the limits are set. Rate limits are in memory, per process; use the server's admission control for a cluster-wide limit.
 * A `match` that selects no tool is an error, so a typo cannot silently leave a tool unlimited. `aaa mcp inspect` lists the rules.
 
+## Profiles: one server, several audiences
+
+A profile is a named allow-list of what one audience may see. Define them once, then give each audience (an API key, a token, or a stdio launch) its profile:
+
+```toml
+[profiles.support]
+description = "front-line support"
+tools = ["orders_get", "orders_search", "kb_*"]     # globs on the final exposed tool names
+resources = ["*readme*"]                            # on a resource's URI or name
+prompts = ["greet"]
+
+[profiles.admin]
+tools = ["*"]
+resources = ["*"]
+prompts = ["*"]
+
+[tenancy]
+profile = "support"            # stdio: the profile this process serves (also --profile support)
+profiles_required = false      # true: a caller with no profile sees nothing
+```
+
+- **Allow-lists.** A kind a profile does not list is not visible to it (`tools = []` means no tools). A tool glob that matches no exposed tool is an error, so a typo cannot silently hide a tool.
+- **Who gets a profile is never up to the caller.** Behind `aaa-server`, the caller's authenticated scopes decide: a key or token holding `profile:support` gets the `support` profile (several profiles combine as a union). On stdio it is the operator's `--profile` / `tenancy.profile`. Nothing in a request, a tool's arguments or a resource URI can name a profile.
+- **It fails closed.** A caller that holds a `profile:` scope that matches no defined profile (a misspelt scope in a key's configuration) sees nothing, not everything. A caller with no profile scope sees everything unless `profiles_required` is set. A tool outside the profile answers like an unknown tool (and a resource like a missing one), so the profile does not reveal what it hides.
+- Profiles combine with per-tool `scopes` policies: both must allow. `aaa mcp inspect --profile support` shows exactly what that audience sees.
+
+```toml
+# aaa-server keys (or the scopes claim of your tokens)
+"<key for the help desk>" = ["run", "profile:support"]
+```
+
 ## Split files and per-environment overlays
 
 A large configuration can be split with `include`, and a base configuration can be adapted per environment with overlays.

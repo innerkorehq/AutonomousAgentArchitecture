@@ -61,20 +61,20 @@ async def handle(
             return {
                 "jsonrpc": "2.0",
                 "id": id_,
-                "result": wire.resources_list_result(core.list_resources(tenant)),
+                "result": wire.resources_list_result(core.list_resources(tenant, scopes)),
             }
         if method == "resources/templates/list":
             return {
                 "jsonrpc": "2.0",
                 "id": id_,
-                "result": wire.resource_templates_list_result(core.list_resource_templates()),
+                "result": wire.resource_templates_list_result(core.list_resource_templates(scopes)),
             }
         if method == "resources/read":
             uri = params.get("uri")
             if not isinstance(uri, str):
                 return _error(id_, INVALID_PARAMS, "resources/read needs a uri")
             try:
-                c = await core.read_resource(uri, tenant=tenant, user=user)
+                c = await core.read_resource(uri, tenant=tenant, user=user, scopes=scopes)
             except ResourceNotFound:
                 return _error(id_, RESOURCE_NOT_FOUND, "resource not found")
             return {"jsonrpc": "2.0", "id": id_, "result": wire.resource_read_result(c)}
@@ -83,7 +83,7 @@ async def handle(
             return {
                 "jsonrpc": "2.0",
                 "id": id_,
-                "result": wire.prompts_list_result(core.list_prompts()),
+                "result": wire.prompts_list_result(core.list_prompts(scopes)),
             }
         if method == "prompts/get":
             name, args = params.get("name"), params.get("arguments") or {}
@@ -92,7 +92,7 @@ async def handle(
                     id_, INVALID_PARAMS, "prompts/get needs a name and an arguments object"
                 )
             try:
-                r = await core.aget_prompt(name, args)
+                r = await core.aget_prompt(name, args, scopes)
             except PromptError as e:
                 return _error(id_, INVALID_PARAMS, str(e))
             return {"jsonrpc": "2.0", "id": id_, "result": wire.prompt_get_result(r)}

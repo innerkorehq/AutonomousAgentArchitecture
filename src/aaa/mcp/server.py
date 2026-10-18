@@ -44,7 +44,7 @@ from aaa.mcp.model import (
     MCPToolDef,
     MCPToolMeta,
 )
-from aaa.mcp.policy import Gates, Limiter, ToolRule
+from aaa.mcp.policy import Gates, Limiter, ProfileSet, ToolRule
 from aaa.mcp.sources.prompts import PromptDef, PromptError
 from aaa.mcp.sources.resources import ResourceNotFound, ResourceSet
 from aaa.runtime.budget import Budget
@@ -84,6 +84,7 @@ class MCPToolServer:
         tool_policy: Mapping[str, ToolRule] | None = None,
         default_scopes: Iterable[str] | None = None,
         clock: Callable[[], float] | None = None,
+        profiles: ProfileSet | None = None,
     ) -> None:
         if algorithms and engine is None:
             raise ValueError("algorithms= needs engine=")
@@ -101,6 +102,9 @@ class MCPToolServer:
         self.resources = resources
         self.prompts = dict(prompts or {})
         self.tool_policy = dict(tool_policy or {})
+        self.profiles = (
+            profiles if profiles else None
+        )  # who may see what, by audience (None: nobody is restricted)
         self.default_scopes = None if default_scopes is None else frozenset(default_scopes)
         self._limiter, self._gates = Limiter(clock), Gates()
         self.agent_budget = agent_budget or Budget(
@@ -116,36 +120,81 @@ class MCPToolServer:
     def has_prompts(self) -> bool:
         return bool(self.prompts)
 
-    def list_resources(self, tenant: str | None = None) -> list[MCPResource]:
-        return self.resources.list(tenant or self.tenant) if self.resources else []
+    def _profile_ok(self, kind: str, scopes: Iterable[str] | None, *candidates: str) -> bool:
+        """Whether the caller's profile (from the authenticated `scopes`, or the server's default for an unrestricted caller) allows this."""
+        if self.profiles is None:
+            return True
+        return self.profiles.allows(
+            kind, None if scopes is None else frozenset(scopes), *candidates
+        )
 
-    def list_resource_templates(self) -> list[MCPResourceTemplate]:
-        return self.resources.templates() if self.resources else []
+    def list_resources(
+        self, tenant: str | None = None, scopes: Iterable[str] | None = None
+    ) -> list[MCPResource]:
+        if not self.resources:
+            return []
+        return [
+            r
+            for r in self.resources.list(tenant or self.tenant)
+            if self._profile_ok("resources", scopes, r.uri, r.name)
+        ]
+
+    def list_resource_templates(
+        self, scopes: Iterable[str] | None = None
+    ) -> list[MCPResourceTemplate]:
+        if not self.resources:
+            return []
+        return [
+            t
+            for t in self.resources.templates()
+            if self._profile_ok("resources", scopes, t.uri_template, t.name)
+        ]
 
     async def read_resource(
-        self, uri: str, *, tenant: str | None = None, user: str | None = None
+        self,
+        uri: str,
+        *,
+        tenant: str | None = None,
+        user: str | None = None,
+        scopes: Iterable[str] | None = None,
     ) -> MCPResourceContents:
-        """Read one resource as the host's tenant/user. Raises `ResourceNotFound` for anything that cannot be served."""
+        """Read one resource as the host's tenant/user. Raises `ResourceNotFound` for anything that cannot be served
+        (including what the caller's profile does not allow: that is indistinguishable from a missing one)."""
         if not self.resources:
             raise ResourceNotFound
-        return await self.resources.read(uri, tenant or self.tenant, user or self.user)
+        tenant = tenant or self.tenant
+        if self.profiles is not None:
+            names = [r.name for r in self.resources.list(tenant) if r.uri == uri]
+            if not self._profile_ok("resources", scopes, uri, *names):
+                raise ResourceNotFound
+        return await self.resources.read(uri, tenant, user or self.user)
 
-    def list_prompts(self) -> list[MCPPrompt]:
-        return [p.describe() for p in self.prompts.values()]
+    def list_prompts(self, scopes: Iterable[str] | None = None) -> list[MCPPrompt]:
+        return [
+            p.describe() for n, p in self.prompts.items() if self._profile_ok("prompts", scopes, n)
+        ]
 
-    def get_prompt(self, name: str, arguments: Mapping[str, Any] | None = None) -> MCPPromptResult:
+    def get_prompt(
+        self,
+        name: str,
+        arguments: Mapping[str, Any] | None = None,
+        scopes: Iterable[str] | None = None,
+    ) -> MCPPromptResult:
         """Fill a prompt. Raises `PromptError` for an unknown prompt or arguments that do not fit."""
         p = self.prompts.get(name)
-        if p is None:
+        if p is None or not self._profile_ok("prompts", scopes, name):
             raise PromptError(f"unknown prompt {name!r}")
         return p.get(arguments)
 
     async def aget_prompt(
-        self, name: str, arguments: Mapping[str, Any] | None = None
+        self,
+        name: str,
+        arguments: Mapping[str, Any] | None = None,
+        scopes: Iterable[str] | None = None,
     ) -> MCPPromptResult:
         """Like `get_prompt`, for hosts that can wait: also fills prompts that live on another server (see `McpSource.prompts`)."""
         p = self.prompts.get(name)
-        if p is None:
+        if p is None or not self._profile_ok("prompts", scopes, name):
             raise PromptError(f"unknown prompt {name!r}")
         fetch = getattr(p, "aget", None)
         return await fetch(arguments) if fetch is not None else p.get(arguments)
@@ -173,8 +222,9 @@ class MCPToolServer:
             if (t := self.registry.get(n)) is not None
             and self._exposed(t)
             and self._visible(n, tenant, held)
+            and self._profile_ok("tools", scopes, n)
         ]
-        if self.algorithms:
+        if self.algorithms and self._profile_ok("tools", scopes, RUN_AGENT):
             out.append(
                 MCPToolDef(
                     RUN_AGENT,
@@ -237,12 +287,15 @@ class MCPToolServer:
         args = dict(arguments or {})
         tenant, user = tenant or self.tenant, user or self.user
         if name == RUN_AGENT and self.algorithms:
+            if not self._profile_ok("tools", scopes, name):
+                return MCPCallResult(f"unknown tool {name!r}", True)
             return await self._run_agent(args, tenant, user)
         t = self.registry.get(name)
         if (
             t is None
             or not self._exposed(t)
             or not self._visible(name, tenant, self._scopes(scopes))
+            or not self._profile_ok("tools", scopes, name)
         ):
             return MCPCallResult(f"unknown tool {name!r}", True)
         rule = self.tool_policy.get(name)

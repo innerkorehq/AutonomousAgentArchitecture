@@ -62,6 +62,12 @@ class TenancySpec(_M):
     scopes: list[str] | None = (
         None  # scopes the single stdio caller holds; None = all (a tool restricted by `scopes` is then visible)
     )
+    profile: str | None = Field(
+        default=None, pattern=r"^[a-z][a-z0-9_-]{0,31}$"
+    )  # the profile the single stdio caller gets (see `profiles`); behind aaa-server the key's `profile:<name>` scopes decide
+    profiles_required: bool = (
+        False  # a caller with no profile sees nothing (default: no profile means no restriction)
+    )
 
 
 class RateLimit(_M):
@@ -487,6 +493,16 @@ Source = Annotated[
 ]
 
 
+class ProfileSpec(_M):
+    """An audience: the tools, resources and prompts it may see, as globs. A kind that is left out is NOT visible to the profile (allow-lists, never deny-lists).
+    Resources match on URI or name; tools and prompts on their final exposed name. Who gets a profile is never up to the caller: see `TenancySpec.profile` and `profile:<name>` scopes."""
+
+    description: str | None = Field(default=None, max_length=300)
+    tools: list[str] = Field(default_factory=list)
+    resources: list[str] = Field(default_factory=list)
+    prompts: list[str] = Field(default_factory=list)
+
+
 class MCPSpec(_M):
     version: Literal[1] = 1
     server: ServerSpec = Field(default_factory=ServerSpec)
@@ -499,6 +515,22 @@ class MCPSpec(_M):
     resources: list[ResourceSpec] = Field(default_factory=list)
     prompts: list[PromptSpec] = Field(default_factory=list)
     runtime: RuntimeSpec = Field(default_factory=RuntimeSpec)
+    profiles: dict[str, ProfileSpec] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _profiles(self) -> MCPSpec:
+        import re
+
+        for n in self.profiles:
+            if not re.match(r"^[a-z][a-z0-9_-]{0,31}$", n):
+                raise ValueError(
+                    f"profile name {n!r} must be lowercase letters, digits, '-' and '_' (at most 32)"
+                )
+        if self.tenancy.profile is not None and self.tenancy.profile not in self.profiles:
+            raise ValueError(f"tenancy.profile {self.tenancy.profile!r} is not defined in profiles")
+        if self.tenancy.profiles_required and not self.profiles:
+            raise ValueError("profiles_required needs at least one profile")
+        return self
 
     def launches_processes(self) -> bool:
         """Whether serving this spec starts a subprocess (a stdio upstream): see `AAA_MCP_ALLOW_SUBPROCESS`."""
@@ -532,6 +564,7 @@ __all__ = [
     "ModuleSource",
     "ObjectsSource",
     "OpenAPISource",
+    "ProfileSpec",
     "PromptArg",
     "PromptMessage",
     "PromptSpec",

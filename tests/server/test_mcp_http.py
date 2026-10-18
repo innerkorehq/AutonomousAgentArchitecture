@@ -168,3 +168,51 @@ async def test_tool_scopes_follow_the_authenticated_principal():
         assert a["isError"] and a["content"][0]["text"].replace("whoami", "X") == b["content"][0][
             "text"
         ].replace("nope", "X")
+
+
+async def test_profile_scopes_of_the_api_key_decide_what_a_caller_sees():
+    from aaa.mcp.policy import Profile, ProfileSet
+
+    @tool
+    def internal() -> str:
+        """Internal only."""
+        return "internal"
+
+    core = MCPToolServer(
+        ToolRegistry([whoami, internal]),
+        profiles=ProfileSet({"support": Profile(tools=("whoami",))}),
+    )
+    env, engine = await make_env(mcp=core)
+    async with (
+        engine,
+        env.client("key-acme") as plain,
+        env.client("key-acme-support") as support,
+        env.client("key-acme-ghost") as ghost,
+    ):
+        listed = lambda r: [t["name"] for t in r.json()["result"]["tools"]]
+        assert sorted(listed(await plain.post("/mcp", json=rpc("tools/list")))) == [
+            "internal",
+            "whoami",
+        ]  # no profile scope: unrestricted
+        assert listed(await support.post("/mcp", json=rpc("tools/list"))) == ["whoami"]
+        assert (
+            listed(await ghost.post("/mcp", json=rpc("tools/list"))) == []
+        )  # a misspelt profile fails closed
+        call = rpc("tools/call", {"name": "internal", "arguments": {}})
+        a = (await support.post("/mcp", json=call)).json()["result"]
+        b = (
+            await support.post("/mcp", json=rpc("tools/call", {"name": "nope", "arguments": {}}))
+        ).json()["result"]
+        assert a["isError"] and a["content"][0]["text"].replace("internal", "X") == b["content"][0][
+            "text"
+        ].replace("nope", "X")
+        assert (await plain.post("/mcp", json=call)).json()["result"]["isError"] is False
+
+
+def test_a_token_keeps_profile_scopes_and_drops_ones_the_server_does_not_know():
+    from aaa_server.auth import _known
+
+    assert _known(frozenset({"run", "profile:support", "profile:Bad", "root", "profile:"})) == {
+        "run",
+        "profile:support",
+    }

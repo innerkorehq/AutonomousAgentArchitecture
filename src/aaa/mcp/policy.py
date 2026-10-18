@@ -5,6 +5,7 @@ concurrency refusals say only that the caller should retry, never how the limits
 
 from __future__ import annotations
 
+import fnmatch
 import time
 from collections import OrderedDict
 from collections.abc import Callable
@@ -64,3 +65,52 @@ class Gates:
 
     def leave(self, name: str) -> None:
         self._active[name] = max(0, self._active.get(name, 0) - 1)
+
+
+PROFILE_PREFIX = "profile:"
+
+
+@dataclass(frozen=True)
+class Profile:
+    tools: tuple[str, ...] = ()
+    resources: tuple[str, ...] = ()
+    prompts: tuple[str, ...] = ()
+
+
+class ProfileSet:
+    """Which tools, resources and prompts a caller may see, by audience.
+
+    The active profiles come only from what the host authenticated: the caller's `profile:<name>` scopes, or, for a caller the host did not restrict (stdio), `default`.
+    Nothing a request carries can choose one. With no active profile the caller is unrestricted, unless `required`, in which case it sees nothing. A profile that lists no
+    globs for a kind sees none of that kind."""
+
+    def __init__(
+        self, profiles: dict[str, Profile], *, default: str | None = None, required: bool = False
+    ) -> None:
+        self.profiles, self.default, self.required = dict(profiles), default, required
+
+    def __bool__(self) -> bool:
+        return bool(self.profiles)
+
+    def active(self, scopes: frozenset[str] | None) -> frozenset[str] | None:
+        """The profiles in force: None when the caller is unrestricted, an empty set when it sees nothing.
+
+        A caller that holds `profile:` scopes is restricted to the ones that exist; if none of them do (a misspelt scope in a key's configuration) it sees nothing,
+        rather than everything."""
+        if not self.profiles:
+            return None
+        if scopes is None:
+            wanted = {self.default} if self.default else set()
+        else:
+            wanted = {s[len(PROFILE_PREFIX) :] for s in scopes if s.startswith(PROFILE_PREFIX)}
+        if wanted:
+            return frozenset(wanted & set(self.profiles))
+        return frozenset() if self.required else None
+
+    def allows(self, kind: str, scopes: frozenset[str] | None, *candidates: str) -> bool:
+        """Whether any of `candidates` (a tool name; a resource's URI and name) is allowed to this caller under `kind` ('tools', 'resources', 'prompts')."""
+        active = self.active(scopes)
+        if active is None:
+            return True
+        globs = [g for n in active for g in getattr(self.profiles[n], kind)]
+        return any(fnmatch.fnmatchcase(c, g) for g in globs for c in candidates)

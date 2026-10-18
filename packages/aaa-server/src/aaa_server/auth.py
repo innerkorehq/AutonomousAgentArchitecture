@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -63,6 +64,14 @@ def hash_api_key(key: str) -> str:
     """SHA-256 hex of an API key. Keys are long random strings, so a fast hash is the right tool (there is
     nothing to brute-force); store this, never the key."""
     return hashlib.sha256(key.encode()).hexdigest()
+
+
+PROFILE_SCOPE = re.compile(r"^profile:[a-z][a-z0-9_-]{0,31}$")
+
+
+def _known(scopes: frozenset[str]) -> frozenset[str]:
+    """The scopes of a token that this server understands: its own, and `profile:<name>` (which audience of an MCP server's tools the caller gets)."""
+    return frozenset(s for s in scopes if s in ALL_SCOPES or PROFILE_SCOPE.match(s))
 
 
 @dataclass(frozen=True)
@@ -230,9 +239,9 @@ class JWTAuthenticator:
         if raw is None:
             scopes = self.default_scopes
         elif isinstance(raw, str):
-            scopes = frozenset(raw.split()) & ALL_SCOPES
+            scopes = _known(frozenset(raw.split()))
         elif isinstance(raw, list):
-            scopes = frozenset(str(s) for s in raw) & ALL_SCOPES
+            scopes = _known(frozenset(str(s) for s in raw))
         else:
             raise AuthError("token scope is malformed")
         return Principal(tenant, str(claims["sub"]), scopes)

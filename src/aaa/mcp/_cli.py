@@ -60,6 +60,10 @@ def add_arguments(mc: argparse._SubParsersAction[argparse.ArgumentParser]) -> No
         p.add_argument("--title", help="server title")
         p.add_argument("--instructions", help="instructions shown to the client")
         p.add_argument("--tenant", help="tenant the calls are for")
+        p.add_argument(
+            "--profile",
+            help="the profile this stdio server serves (see `profiles` in the configuration)",
+        )
         p.add_argument("--user", help="user the calls are for")
         p.add_argument(
             "--expose-approval-tools",
@@ -180,6 +184,7 @@ def overlay_of(a: argparse.Namespace) -> dict[str, Any]:
     put("tools.exclude", a.exclude)
     put("tools.tags", a.tag)
     put("tools.prefix", a.prefix)
+    put("tenancy.profile", a.profile)
     put("tools.expose_approval_tools", True if a.expose_approval_tools else None)
     put("server.name", a.name)
     put("server.title", a.title)

@@ -16,6 +16,8 @@ KEYS = {
     "key-acme-approver": ("acme", "root", ["run", "session", "approve"]),
     "key-globex": ("globex", "gus", ["run", "session", "approve", "admin"]),
     "key-acme-answerer": ("acme", "amy", ["run", "answer"]),
+    "key-acme-support": ("acme", "sue", ["run", "profile:support"]),
+    "key-acme-ghost": ("acme", "gil", ["run", "profile:suport"]),
     "key-globex-answerer": ("globex", "gina", ["run", "answer"]),
 }
 
