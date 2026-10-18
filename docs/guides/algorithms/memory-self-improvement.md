@@ -9,6 +9,7 @@ Four ways for an agent to get better with use: keep **skills** it has written an
 ```text
 skills: stored add_numbers | a failing test is refused | AssertionError
 skills: run -> 42 | other tenant sees []
+curriculum: [('add 20 and 22', True), ('add 1 and 2', True)] | skills ['add_numbers'] | done
 reflection: Ann is building a bakery in Lisbon. | sources ['m1', 'm0'] | stored 1
 self-managed: True (the next run starts with what the model chose to keep)
 optimise: 'Think step by step.' | dev 0.0 -> 1.0, held-out 0.0 -> 1.0 | improved: True
@@ -31,7 +32,13 @@ What the code enforces, not the prompt:
 - **Arguments are data.** A skill runs from a fixed template; its arguments arrive as a JSON file, never as text spliced into code.
 - **Bounded.** Code, test and description sizes, `max_skills`, and the sandbox `Limits` (time, memory, output).
 
-`VoyagerAgent` is a tool loop that finds a fitting skill, otherwise writes one with `save_skill` (and repairs it if the test fails), then runs it and answers. It does not invent its own curriculum; loop it over tasks yourself. The memory backend must keep `meta` as given (the native and fake memories do); `SubprocessSandbox` is for development, not isolation.
+`VoyagerAgent` is a tool loop that finds a fitting skill, otherwise writes one with `save_skill` (and repairs it if the test fails), then runs it and answers. The memory backend must keep `meta` as given (the native and fake memories do); `SubprocessSandbox` is for development, not isolation.
+
+### VoyagerCurriculum
+
+`VoyagerCurriculum(agent, goal, max_tasks=5, child_budget=...)` is Voyager's automatic curriculum. Each round it lists the skills the library holds (`list_skills`), asks the model for the **next task** (slightly harder than what the agent can already do, building on its skills; the goal, the skills and the tasks tried so far are shown as quoted data), and runs the agent on it as a **child run under `child_budget`**. It stops when the model says `done`, when it proposes nothing new (a task is never attempted twice, compared ignoring case), or after `max_tasks`.
+
+It adds no new power: everything the agent does stays gated as above (tests before storing, approval before saving or running unless you turned it off, the sandbox's limits). It only chooses *what to attempt*, a bounded number of times. Skills are written under the run's tenant and user; children inherit their parent's user. Result `{"attempted": [{"task", "ok", "answer"}], "skills": [...], "stopped": "done" | "max_tasks" | "no_new_task"}`.
 
 ## MemoryReflection
 

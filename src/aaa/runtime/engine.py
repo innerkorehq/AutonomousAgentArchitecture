@@ -759,7 +759,7 @@ class Engine:
         cancelled if the parent finishes first. `tenant` tags the run and everything derived from it
         (children inherit their parent's); see `Engine.tenant()` for the safe, namespaced way. `meta`
         is trusted application data (e.g. `{"user": "ann"}`) stamped on the run's events and inherited
-        by everything derived from them; memory scopes are built from it, never from model output."""
+        by everything derived from them (a child run with no `meta` of its own gets its parent's); memory scopes are built from it, never from model output."""
         self.register(algo)
         if tenant is not None:
             valid_tenant(tenant)
@@ -774,6 +774,12 @@ class Engine:
         parent_run = self._runs.get(parent) if parent else None
         if tenant is None and parent:
             tenant = parent_run.tenant if parent_run else await self._tenant_of(parent)
+        if (
+            meta is None and parent
+        ):  # a child belongs to the same user (and agent) as its parent: memory scopes are built from this
+            first = await self.retry(lambda: self.store.read(parent, 0, 1), "read")
+            if first and first[0].meta:
+                meta = dict(first[0].meta)
         if tenant is None and self.require_tenant:
             raise ValueError("this engine requires a tenant: use engine.tenant(name).start(...)")
         run = _Run(

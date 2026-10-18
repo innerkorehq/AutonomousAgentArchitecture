@@ -16,11 +16,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from aaa.algos.base import ask, data_block, finish, llm_failed, parse_json_obj, stable, tool_request
+from aaa.algos.hier import HIER, _text_of
 from aaa.algos.loops import ToolLoop
 from aaa.core.ids import stable_id
+from aaa.core.outcome import OutcomeKind
+from aaa.events import Event
+from aaa.llm.types import Message
 from aaa.memory.base import Deletable, Memory
 from aaa.memory.tools import scope_from_tool_context
 from aaa.memory.types import MemoryEntry, Scope
+from aaa.runtime import Budget, Ctx
 from aaa.sandbox.base import ExecResult, Limits, Sandbox, SandboxError
 from aaa.tools import Tool, ToolRegistry
 from aaa.tools.tool import ToolContext, ToolError
@@ -201,7 +207,7 @@ class SkillLibrary:
 
 
 def skill_tools(library: SkillLibrary, *, requires_approval: bool = True) -> list[Tool]:
-    """`find_skill`, `run_skill` and `save_skill` for a tool loop. Finding is read-only; **running and saving execute code**, so they wait
+    """`find_skill`, `list_skills`, `run_skill` and `save_skill` for a tool loop. Finding is read-only; **running and saving execute code**, so they wait
     for approval unless you turn that off for a sandbox you would trust with the worst code the model could write."""
     from aaa.tools.tool import tool
 
@@ -212,6 +218,14 @@ def skill_tools(library: SkillLibrary, *, requires_approval: bool = True) -> lis
         return [
             {"name": s.name, "description": s.description}
             for s in await library.search(query, scope)
+        ]
+
+    @tool
+    async def list_skills(ctx: ToolContext) -> list[dict[str, str]]:
+        """Every skill learned so far (names and descriptions)."""
+        scope = scope_from_tool_context(ctx)
+        return [
+            {"name": s.name, "description": s.description} for s in (await library.list(scope))[:50]
         ]
 
     @tool(requires_approval=requires_approval)
@@ -233,7 +247,7 @@ def skill_tools(library: SkillLibrary, *, requires_approval: bool = True) -> lis
         )
         return {"saved": stored, "detail": detail}
 
-    return [find_skill, run_skill, save_skill]
+    return [find_skill, list_skills, run_skill, save_skill]
 
 
 _VOYAGER_PROMPT = (
@@ -270,4 +284,144 @@ class VoyagerAgent(ToolLoop):
             ),
             max_turns=max_turns,
             **kw,
+        )
+
+
+_CURRICULUM_SYSTEM = (
+    "You design a curriculum for an agent that learns reusable skills (small Python functions). Given the goal, the skills it has and the tasks already tried, "
+    "propose the NEXT task: one that is slightly harder than what it can already do and builds on its skills, small enough to finish in a few steps. "
+    'Reply with JSON {"task": "...", "done": false}, or {"done": true} when the goal is met or nothing sensible is left.'
+)
+
+
+class VoyagerCurriculum:
+    """Voyager's automatic curriculum: propose a task, let a `VoyagerAgent` attempt it, remember how it went, propose the next.
+
+    Each round lists the skills the library holds (a tool call), asks the model for one new task from the goal, the skills and the tasks already tried
+    (shown as quoted data), and runs the agent on it as a **child run under `child_budget`**. Everything the agent does is as gated as ever: skills are
+    saved only after their test passes in the sandbox, and running or saving waits for approval unless you turned that off. The curriculum adds no new
+    power: it only chooses what to attempt, at most `max_tasks` times, never the same task twice, and stops when the model says `done`.
+
+    Attach `ToolHandler(agent.tools)` for the agent you pass. Result: `{"attempted": [{"task", "ok", "answer"}], "skills": [names], "stopped"}` with
+    `stopped` `done`, `max_tasks` or `no_new_task`. At most `max_tasks` proposal calls plus the agent's own."""
+
+    name = "voyager_curriculum"
+
+    def __init__(
+        self,
+        agent: VoyagerAgent,
+        goal: str,
+        *,
+        max_tasks: int = 5,
+        child_budget: Budget | None = None,
+        model: str | None = None,
+    ) -> None:
+        if not 1 <= max_tasks <= 12:
+            raise ValueError("max_tasks must be between 1 and 12")
+        if not goal.strip() or len(goal) > 1000:
+            raise ValueError("the goal must be 1 to 1000 characters")
+        self.agent, self.goal, self.max_tasks, self.model = agent, goal.strip(), max_tasks, model
+        self.child_budget = child_budget or Budget(max_steps=60, max_tokens=200_000, deadline_s=600)
+        self.tools = agent.tools
+
+    @property
+    def max_calls(self) -> int:
+        return self.max_tasks
+
+    def subscriptions(self) -> list[str]:
+        return [
+            "aaa.run.started",
+            "aaa.llm.completed",
+            "aaa.llm.failed",
+            "aaa.tool.completed",
+            "aaa.tool.failed",
+            "aaa.child.completed",
+        ]
+
+    async def on_event(self, e: Event, ctx: Ctx) -> list[Event]:
+        if e.type == "aaa.llm.failed":
+            return [llm_failed(e)]
+        st = await ctx.project(HIER)
+        tried: list[dict[str, Any]] = []
+        skills: list[str] = []
+        for r in range(self.max_tasks):
+            listing, prop, kid = f"l{r}", f"p{r}", f"k{r}"
+            if not st.done(listing):
+                return [
+                    stable(tool_request(e, listing, "list_skills", {}), f"{self.name}:{listing}")
+                ]
+            skills = [
+                str(x.get("name")) for x in (st.results.get(listing) or []) if isinstance(x, dict)
+            ]
+            if not st.done(prop):
+                known = (
+                    "\n".join(
+                        f"- {x['name']}: {x['description']}"
+                        for x in (st.results.get(listing) or [])
+                        if isinstance(x, dict)
+                    )
+                    or "(none yet)"
+                )
+                history = (
+                    "\n".join(f"- {'done' if t['ok'] else 'FAILED'}: {t['task']}" for t in tried)
+                    or "(nothing yet)"
+                )
+                msgs = [
+                    Message(role="system", content=_CURRICULUM_SYSTEM),
+                    Message(
+                        role="user",
+                        content="\n\n".join(
+                            [
+                                data_block("goal", self.goal),
+                                data_block("skills", known),
+                                data_block("tasks_tried", history),
+                            ]
+                        ),
+                    ),
+                ]
+                return [
+                    ask(
+                        e,
+                        self.name,
+                        prop,
+                        msgs,
+                        model=self.model,
+                        schema={
+                            "type": "object",
+                            "properties": {"task": {"type": "string"}, "done": {"type": "boolean"}},
+                        },
+                    )
+                ]
+            reply = parse_json_obj(st.text(prop)) or {}
+            task = str(reply.get("task") or "").strip()[:500]
+            if reply.get("done") is True or prop in st.failed:
+                return [self._end(e, tried, skills, "done")]
+            if not task or task.lower() in {t["task"].lower() for t in tried}:
+                return [self._end(e, tried, skills, "no_new_task")]
+            out = st.outcomes.get(kid)
+            if out is None:
+                if kid not in st.started:
+                    child = stable_id(ctx.run_id, f"task-{r}")
+                    await ctx.engine.emit(
+                        e.caused(
+                            "aaa.task.started",
+                            {"subgoal": kid, "task": task, "child_run_id": child},
+                        )
+                    )
+                    await ctx.engine.start(
+                        self.agent,
+                        {"task": task},
+                        parent=ctx.run_id,
+                        tag=kid,
+                        run_id=child,
+                        budget=self.child_budget,
+                    )
+                return []
+            ok = out["kind"] == "success"
+            tried.append({"task": task, "ok": ok, "answer": _text_of(out["value"]) if ok else None})
+        return [self._end(e, tried, skills, "max_tasks")]
+
+    def _end(self, e: Event, tried: list[dict[str, Any]], skills: list[str], stopped: str) -> Event:
+        return finish(
+            e, OutcomeKind.SUCCESS, {"attempted": tried, "skills": skills, "stopped": stopped}
         )

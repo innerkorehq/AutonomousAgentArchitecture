@@ -5,7 +5,15 @@ import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 
-from aaa.algos import MemoryReflection, SelfManagedMemory, Skill, SkillLibrary, ToolLoop
+from aaa.algos import (
+    MemoryReflection,
+    SelfManagedMemory,
+    Skill,
+    SkillLibrary,
+    ToolLoop,
+    VoyagerAgent,
+    VoyagerCurriculum,
+)
 from aaa.eval import Case, Dataset, ExactMatch
 from aaa.llm import FakeLLMClient, LLMHandler
 from aaa.llm.fake import text
@@ -59,6 +67,66 @@ async def skills() -> None:
         run.result,
         "| other tenant sees",
         await library.search("add numbers", Scope(tenant="globex")),
+    )
+
+
+def call(tool, **arguments):
+    message = Message(
+        role="assistant", tool_calls=[ToolCall(id="c1", name=tool, arguments=arguments)]
+    )
+    return LLMResponse(message=message, model="fake", finish_reason="tool_calls")
+
+
+async def curriculum() -> None:
+    library = SkillLibrary(FakeMemory(), SubprocessSandbox(unsafe=True))
+    agent = VoyagerAgent(
+        library, requires_approval=False
+    )  # no human in this offline demo: see the guide before doing this for real
+    tasks = iter([{"task": "add 20 and 22"}, {"task": "add 1 and 2"}, {"done": True}])
+    skill = Skill(
+        "add_numbers",
+        "Add two numbers.",
+        "def skill(a, b):\n    return a + b\n",
+        "assert skill(2, 3) == 5\n",
+    )
+
+    def model(request):
+        if "design a curriculum" in system_of(request):
+            return text(json.dumps(next(tasks)))
+        last = request.messages[-1]
+        numbers = [
+            int(w)
+            for w in next(m.content for m in request.messages if m.role == "user").split()
+            if w.isdigit()
+        ]
+        if last.role == "user":
+            return call("find_skill", query="add numbers")
+        if last.name == "find_skill" and last.content.strip() == "[]":
+            return call(
+                "save_skill",
+                name=skill.name,
+                description=skill.description,
+                code=skill.code,
+                test=skill.test,
+            )
+        if last.name in ("find_skill", "save_skill"):
+            return call(
+                "run_skill", name="add_numbers", arguments={"a": numbers[0], "b": numbers[1]}
+            )
+        return text(f"The answer is {sum(numbers[:2])}.")
+
+    program = VoyagerCurriculum(agent, "get good at arithmetic")
+    async with Engine() as engine:
+        LLMHandler(FakeLLMClient(model)).attach(engine)
+        ToolHandler(program.tools).attach(engine)
+        out = await engine.run(program, {"task": "start"}, tenant="acme", meta={"user": "ann"})
+    print(
+        "curriculum:",
+        [(t["task"], t["ok"]) for t in out.value["attempted"]],
+        "| skills",
+        out.value["skills"],
+        "|",
+        out.value["stopped"],
     )
 
 
@@ -172,7 +240,7 @@ async def optimisation() -> None:
 
 
 async def main() -> None:
-    for demo in (skills, reflection, self_managed, optimisation):
+    for demo in (skills, curriculum, reflection, self_managed, optimisation):
         await demo()
 
 

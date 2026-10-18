@@ -52,6 +52,8 @@
 
 ::: aaa.algos.VoyagerAgent
 
+::: aaa.algos.VoyagerCurriculum
+
 ::: aaa.algos.MemoryReflection
 
 ::: aaa.algos.rank_memories

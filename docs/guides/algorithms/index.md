@@ -84,6 +84,7 @@ flowchart TD
 | [`RolePlaySOP`](multi-agent-human.md) | your roles and their document types | `roles * (repairs + 1)` at most | `roles`, `max_repairs` | `{"document", "documents", "roles", "repairs"}` |
 | [`AskHuman`](multi-agent-human.md) | the model, and a person | `max_questions + 1` at most | `max_questions` | `{"answer", "questions", "asked"}` |
 | [`VoyagerAgent`](memory-self-improvement.md) | the model, with verified skills | per turn | `library`, `requires_approval`, `max_turns` | `{"text", "turns"}` |
+| [`VoyagerCurriculum`](memory-self-improvement.md) | the model proposes, a `VoyagerAgent` attempts | `max_tasks` proposals + the agent's | `agent`, `goal`, `max_tasks`, `child_budget` | `{"attempted", "skills", "stopped"}` |
 | [`MemoryReflection`](memory-self-improvement.md) | an importance threshold, then the model | `window + 1 + questions` at most | `window`, `threshold`, `questions` | `{"reflected", "importance", "questions", "insights", "written"}` |
 | [`SelfManagedMemory`](memory-self-improvement.md) | the model, via memory tools | per turn | `blocks`, `extra_tools` | `{"text", "turns"}` |
 | [`CorrectiveRAG`](rag-checked.md) | grades per passage | `(rewrites + 1) * k + rewrites + k + 1` at most | `index`, `k`, `web_tool`, `min_relevant`, `max_rewrites` | `{"text", "sources", "queries", "route", "graded"}` |

@@ -20,7 +20,7 @@ from aaa.algos.refine import GenerateTestRepair, GeneratorCritic
 from aaa.algos.reflect import MemoryReflection, rank_memories, reflection_tools
 from aaa.algos.reflexion import Reflexion
 from aaa.algos.route import Route, Router
-from aaa.algos.skills import Skill, SkillLibrary, VoyagerAgent, skill_tools
+from aaa.algos.skills import Skill, SkillLibrary, VoyagerAgent, VoyagerCurriculum, skill_tools
 from aaa.algos.sop import Role, RolePlaySOP
 from aaa.algos.swarm import Agent, Swarm
 from aaa.algos.toolplan import ReWOO
@@ -78,6 +78,7 @@ __all__ = [
     "ToolLoop",
     "TreeOfThoughts",
     "VoyagerAgent",
+    "VoyagerCurriculum",
     "WorkflowGraph",
     "rank_memories",
     "reflection_tools",

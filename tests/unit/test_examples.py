@@ -144,6 +144,7 @@ EXPECTED = {
     "memory_algorithms.py": [
         "skills: stored add_numbers | a failing test is refused | AssertionError",
         "skills: run -> 42 | other tenant sees []",
+        "curriculum: [('add 20 and 22', True), ('add 1 and 2', True)] | skills ['add_numbers'] | done",
         "reflection: Ann is building a bakery in Lisbon. | sources ['m1', 'm0'] | stored 1",
         "self-managed: True (the next run starts with what the model chose to keep)",
         "optimise: 'Think step by step.' | dev 0.0 -> 1.0, held-out 0.0 -> 1.0 | improved: True",
