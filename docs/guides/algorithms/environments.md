@@ -9,6 +9,7 @@ Three algorithms for acting beyond text: operate an **environment** (a web page,
 ```text
 computer: 20 euros a month | actions 1 | approvals asked 1
 codeact: The sum of the first ten squares is 385. | it ran: 385 | approvals asked 1
+codeact+tools: Paris 2100001 | tool calls ['lookup', 'lookup'] | approvals asked 1
 anytime: 42 | tried ['quick', 'careful'] | stopped: accepted
 ```
 
@@ -49,7 +50,21 @@ env = BrowserEnvironment(allowed_hosts=["docs.example.com", "*.example.com"], st
 - **A sandbox is required** (anything that is not a `Sandbox` is a `TypeError`); there is no in-process fallback. `SubprocessSandbox` is not isolation and refuses to exist without `unsafe=True`; use `DockerSandbox` for anything but development.
 - **Every run waits for approval** (the `run_python` tool is `code_exec_tool(..., requires_approval=True)`); nothing runs while it waits. Pass `requires_approval=False` only for a sandbox you would trust with the worst code a model could write.
 - Time, memory and output limits come from the sandbox `Limits`; code is capped at `max_code_chars`; runs at `max_steps`. Running out ends `NO_SOLUTION`.
-- The code gets **nothing**: no network, files, tools or memory between runs. A bridge for calling your tools from inside the code is not part of this release; put what the code needs in the task.
+- By default the code gets **nothing**: no network, files, tools or memory between runs.
+
+### Calling tools from the code
+
+```python
+agent = CodeAct(sandbox, tools=ToolRegistry([lookup, add]), tool_names=["lookup", "add"], max_tool_calls=8)
+ToolHandler(agent.tools).attach(engine)
+```
+
+The model's code can then write `city = tools.lookup(query="capital of France")`. The sandbox has no way back to the host, so the bridge works by **replay**: the program runs until its first call without a recorded answer, prints the request and stops; the host makes the call **through the normal tool pipeline** (approval, timeouts, guards, budgets, the tool's schema), records the answer, and runs the program again from the start with the answers so far. When the program runs to the end, its output is the observation.
+
+- **Only the tools you list** (`tool_names`, default the whole registry) can be called; anything else, bad arguments, and calls beyond `max_tool_calls` come back to the code as a `ToolCallError` (and are never made). A tool that needs approval still asks, every time; a refusal reaches the code as a `ToolCallError` it can handle.
+- **Approval covers the program once.** `run_program` (new code) waits for approval; `resume_program` (the same code again, with answers) runs only code that was approved on the log and asks nothing more. The calls are made by the host for the run's tenant and user; the code cannot name another.
+- **The code must be deterministic up to its calls**: it is run again, so randomness, the clock or other unrecorded input must not decide which calls it makes. The prelude compares each replayed call with its record and raises `ToolCallError` if they differ, so a non-deterministic program gets an error, not a wrong answer. Only the final, complete run's output is shown.
+- Cost: each tool call is one more sandbox run (up to `max_tool_calls + 1` per code step), each under the sandbox `Limits`; the model-call bound is unchanged. Tool results are handed to the program as JSON (at most `max_result_chars` each) and shown to the model quoted.
 
 Result `{"answer", "steps": [{"code", "exit_code", "stdout", "stderr"}], "turns"}`.
 

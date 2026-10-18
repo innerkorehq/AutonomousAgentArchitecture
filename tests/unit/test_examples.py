@@ -131,6 +131,7 @@ EXPECTED = {
     "environment_algorithms.py": [
         "computer: 20 euros a month | actions 1 | approvals asked 1",
         "codeact: The sum of the first ten squares is 385. | it ran: 385 | approvals asked 1",
+        "codeact+tools: Paris 2100001 | tool calls ['lookup', 'lookup'] | approvals asked 1",
         "anytime: 42 | tried ['quick', 'careful'] | stopped: accepted",
     ],
     "multi_agent_algorithms.py": [

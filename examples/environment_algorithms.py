@@ -13,7 +13,7 @@ from aaa.llm import FakeLLMClient, LLMHandler
 from aaa.llm.fake import text
 from aaa.runtime import Engine
 from aaa.sandbox import SubprocessSandbox
-from aaa.tools import ToolHandler, ToolRegistry
+from aaa.tools import ToolHandler, ToolRegistry, tool
 
 
 async def run_approving(algorithm, model, task):
@@ -78,6 +78,34 @@ async def code() -> None:
     )
 
 
+@tool
+def lookup(query: str) -> str:
+    """Look a fact up."""
+    return {"capital of France": "Paris", "population of Paris": "2100000"}[query]
+
+
+async def code_with_tools() -> None:
+    program = """```python
+city = tools.lookup(query="capital of France")
+people = int(tools.lookup(query="population of " + city))
+print(city, people + 1)
+```"""
+    replies = iter([program, "Paris has 2100001 people with one more."])
+    algorithm = CodeAct(SubprocessSandbox(unsafe=True), tools=ToolRegistry([lookup]))
+    out, approvals = await run_approving(
+        algorithm, lambda request: text(next(replies)), "People in the capital of France, plus one?"
+    )
+    step = out.value["steps"][0]
+    print(
+        "codeact+tools:",
+        step["stdout"].strip(),
+        "| tool calls",
+        [c["tool"] for c in step["tool_calls"]],
+        "| approvals asked",
+        approvals,
+    )
+
+
 class Fixed(ToolLoop):
     """A rung that answers at once (a stand-in for 'a cheap model' or 'a quick heuristic')."""
 
@@ -112,7 +140,7 @@ async def anytime() -> None:
 
 
 async def main() -> None:
-    for demo in (computer, code, anytime):
+    for demo in (computer, code, code_with_tools, anytime):
         await demo()
 
 
