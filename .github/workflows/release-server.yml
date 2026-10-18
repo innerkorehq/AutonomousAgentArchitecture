@@ -22,7 +22,7 @@ jobs:
       already_published: ${{ steps.exists.outputs.published }}
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Tag, version and dependency floor agree
         run: |
           uv run --no-project python - <<'PY'
@@ -68,7 +68,7 @@ jobs:
       AAA_TEST_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
