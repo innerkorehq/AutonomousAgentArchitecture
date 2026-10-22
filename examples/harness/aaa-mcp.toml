@@ -1,0 +1,46 @@
+# Two AAA algorithms as MCP tools. Serve with:  aaa mcp serve --config aaa-mcp.toml
+version = 1
+
+[server]
+name = "aaa-algos"
+instructions = "Tools that spend several model calls on one question. Use them when a single answer is not good enough."
+
+[runtime]
+engine = "agents:engine"
+
+[limits]
+max_concurrent_agents = 2
+
+[[agents]]
+name = "careful_answer"
+algorithm = "agents:careful"
+description = "Answer a question that has one checkable answer (arithmetic, a fact, a short derivation) by sampling five reasoning attempts and taking the majority. Costs about five model calls."
+output = "text"
+input_template = { task = "{question}" }
+
+[agents.budget]
+deadline_s = 120
+max_steps = 12
+
+[agents.input_schema]
+type = "object"
+required = ["question"]
+additionalProperties = false
+properties = { question = { type = "string", description = "The question, with all the numbers and context it needs." } }
+
+[[agents]]
+name = "polish_text"
+algorithm = "agents:polished"
+description = "Improve a draft: the model writes, critiques its own draft and rewrites it, at most twice. Costs two to five model calls."
+output = "text"
+input_template = { task = "{draft}" }
+
+[agents.budget]
+deadline_s = 120
+max_steps = 12
+
+[agents.input_schema]
+type = "object"
+required = ["draft"]
+additionalProperties = false
+properties = { draft = { type = "string", description = "The text to improve, with any instructions on top." } }

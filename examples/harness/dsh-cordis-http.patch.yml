@@ -1,0 +1,11 @@
+# The same tools from an aaa-server instead of a child process (DeepSeek Harness sends static headers only; it has no OAuth).
+- insert:
+    - id: mcp-aaa-http
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: aaa
+        transport: streamable-http
+        url: https://aaa.example.com/mcp
+        headers:
+          Authorization: !!js `Bearer ${process.env.AAA_SERVER_KEY}`
+        toolCallTimeoutMs: 180000

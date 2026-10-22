@@ -1,0 +1,16 @@
+# Append to ~/.dsh/profiles/web/cordis.patch.yml (DeepSeek Harness). Tools appear as mcp__aaa__careful_answer and mcp__aaa__polish_text.
+- insert:
+    - id: mcp-aaa
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: aaa
+        transport: stdio
+        command: aaa
+        args: ['mcp', 'serve', '--config', '/ABSOLUTE/PATH/TO/examples/harness/aaa-mcp.toml']
+        cwd: /ABSOLUTE/PATH/TO/examples/harness
+        env:
+          PYTHONPATH: /ABSOLUTE/PATH/TO/examples/harness
+          AAA_BASE_URL: http://localhost:8001/v1
+          AAA_MODEL: mlx-community--Qwen3-4B-Instruct-2507-4bit
+          AAA_API_KEY: !!js process.env.AAA_API_KEY
+        toolCallTimeoutMs: 180000

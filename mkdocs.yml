@@ -84,6 +84,7 @@ nav:
       - Built-in tools and the code sandbox: guides/builtin-tools.md
       - MCP servers: guides/mcp.md
       - Generating an MCP server: guides/mcp-generator.md
+      - Using AAA from a coding harness: guides/harnesses.md
       - Human approval: guides/human-approval.md
       - Streaming: guides/streaming.md
       - Algorithms:

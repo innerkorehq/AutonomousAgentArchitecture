@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aaa": {
+      "type": "local",
+      "command": ["aaa", "mcp", "serve", "--config", "/ABSOLUTE/PATH/TO/examples/harness/aaa-mcp.toml"],
+      "environment": {
+        "PYTHONPATH": "/ABSOLUTE/PATH/TO/examples/harness",
+        "AAA_BASE_URL": "http://localhost:8001/v1",
+        "AAA_MODEL": "mlx-community--Qwen3-4B-Instruct-2507-4bit"
+      },
+      "enabled": true,
+      "timeout": 15000
+    }
+  }
+}

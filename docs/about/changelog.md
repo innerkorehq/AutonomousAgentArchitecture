@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Guide **Using AAA from a coding harness** (opencode, DeepSeek Harness) with a tested `examples/harness/` (algorithms as MCP tools over stdio, plus HTTP variants and sample configs for both harnesses). The AAA side was run through a real MCP client; the harness configs follow their docs and were not run against the harnesses.
 - **Benchmarks** on real models: `benchmarks/` (not part of the package) runs the algorithms on arithmetic, tool-use and retrieval tasks against any OpenAI-compatible server and reports accuracy, model calls, tokens and latency; the first results (Qwen3-4B and Qwen3.5-2B on a laptop, via omlx) and a "when to use which" table are in the new *Benchmarks* guide. Findings: on easy problems a single call matches the search algorithms at a fraction of the tokens; plan-first tool algorithms depend on the model's ability to plan; retrieval algorithms that let the model decide whether to retrieve inherit its habits.
 
 ## 0.6.0 (2026-10-19)
