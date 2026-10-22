@@ -1,0 +1,42 @@
+{
+  "algorithm": "codeact",
+  "about": "writes and runs Python",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.8611111111111112,
+  "calls": 1.0,
+  "tokens": 290.5,
+  "latency_s": 3.258391260417435,
+  "wall_s": 117.31124754199845,
+  "acc_per_1k_tokens": 2.9642379039969406,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-06",
+      "text": " tickets free, which means 50 divided by 3 is 16 groups of 3 tickets and 2 people left over.\nTotal tickets needed: 16 * 3 + 2 = 48 + 2 = 50 tickets.\nCost: 50 tickets * $40/ticket = $2000.\nAnswer: 2000",
+      "reason": "None"
+    },
+    {
+      "case": "math-09",
+      "text": "140 / 5 = 28\n28 + 52 = 80\nAnswer: 80",
+      "reason": "None"
+    },
+    {
+      "case": "math-09",
+      "text": "140 divided by 5 is 28.\n28 plus 52 is 80.\nAnswer: 80",
+      "reason": "None"
+    },
+    {
+      "case": "math-15",
+      "text": "165 divided by 5 is 33.\n33 plus 47 is 80.\nAnswer: 80",
+      "reason": "None"
+    },
+    {
+      "case": "math-15",
+      "text": "5 marbles, and he gives away a fifth of them.\nCalculation: $165 / 5 = 33$.\nSo, he gives away 33 marbles.\nNext, he buys 47 more marbles.\nCalculation: $33 + 47 = 80$.\nTom now has 80 marbles.\n\nAnswer: 80",
+      "reason": "None"
+    }
+  ]
+}

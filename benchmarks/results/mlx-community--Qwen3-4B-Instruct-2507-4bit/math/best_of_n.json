@@ -1,0 +1,15 @@
+{
+  "algorithm": "best_of_n",
+  "about": "5 samples, model judge picks",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 10.0,
+  "tokens": 2398.972222222222,
+  "latency_s": 9.619020589055557,
+  "wall_s": 346.296554499997,
+  "acc_per_1k_tokens": 0.416845176753934,
+  "errors": 0,
+  "failures": []
+}

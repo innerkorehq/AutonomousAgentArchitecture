@@ -1,0 +1,47 @@
+{
+  "algorithm": "corrective_rag",
+  "about": "grade chunks, rewrite, answer",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.8125,
+  "calls": 6.90625,
+  "tokens": 1104.0,
+  "latency_s": 5.123259649684769,
+  "wall_s": 163.9606537919899,
+  "acc_per_1k_tokens": 0.7359601449275361,
+  "errors": 10,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-01",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.68 GB peak (current 7.29 GB + KV+SDPA 399.28 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "rag-02",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.64 GB peak (current 7.47 GB + KV+SDPA 172.66 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "rag-09",
+      "text": "The passages do not contain the answer.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-09",
+      "text": "The passages do not contain the answer.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-11",
+      "text": "ntil the end of the text. However, the passage does not specify the exact year Joaquim Ferreyra served or the total duration of his tenure.\n\nTherefore, the answer is **not contained in the passages**.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-11",
+      "text": "rmeer stepped down in 2011 and was succeeded by Joaquim Ferreyra. The text does not specify how long she served, only that she stepped down in 2011.\n\nTherefore, the passages do not contain the answer.",
+      "reason": "None"
+    }
+  ]
+}

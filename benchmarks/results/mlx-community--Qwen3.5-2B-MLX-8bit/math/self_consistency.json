@@ -1,0 +1,16 @@
+{
+  "algorithm": "self_consistency",
+  "about": "5 samples, majority vote",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 5.0,
+  "tokens": 1824.0277777777778,
+  "latency_s": 10.435824524194484,
+  "wall_s": 375.711718999999,
+  "acc_per_1k_tokens": 0.5482372649052006,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

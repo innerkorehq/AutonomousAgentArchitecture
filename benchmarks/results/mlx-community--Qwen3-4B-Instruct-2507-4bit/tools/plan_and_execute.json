@@ -1,0 +1,47 @@
+{
+  "algorithm": "plan_and_execute",
+  "about": "plan, run each step with a tool loop",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.3333333333333333,
+  "calls": 17.0,
+  "tokens": 5438.5,
+  "latency_s": 12.71896439430008,
+  "wall_s": 381.5949285839961,
+  "acc_per_1k_tokens": 0.06129141000888725,
+  "errors": 6,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-01",
+      "text": "",
+      "reason": "planner returned an invalid plan"
+    },
+    {
+      "case": "tool-01",
+      "text": "Answer: 168600",
+      "reason": "None"
+    },
+    {
+      "case": "tool-02",
+      "text": "",
+      "reason": "planner returned an invalid plan"
+    },
+    {
+      "case": "tool-03",
+      "text": "Answer: 308700",
+      "reason": "None"
+    },
+    {
+      "case": "tool-03",
+      "text": "Answer: 308700",
+      "reason": "None"
+    },
+    {
+      "case": "tool-04",
+      "text": "Answer: 4100",
+      "reason": "None"
+    }
+  ]
+}

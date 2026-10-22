@@ -1,0 +1,47 @@
+{
+  "algorithm": "plan_and_execute",
+  "about": "plan, run each step with a tool loop",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.36666666666666664,
+  "calls": 13.2,
+  "tokens": 5423.766666666666,
+  "latency_s": 14.053858966569532,
+  "wall_s": 421.65264466698864,
+  "acc_per_1k_tokens": 0.06760369484921303,
+  "errors": 17,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-02",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.70 GB peak (current 7.58 GB + KV+SDPA 121.13 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "tool-02",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.61 GB peak (current 7.49 GB + KV+SDPA 121.13 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "tool-03",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.60 GB peak (current 7.48 GB + KV+SDPA 121.16 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "tool-03",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.61 GB peak (current 7.49 GB + KV+SDPA 121.16 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "tool-04",
+      "text": "",
+      "reason": "ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.64 GB peak (current 7.52 GB + KV+SDPA 121.17 MB) but the prefill limit is 7.60 GB (dynami"
+    },
+    {
+      "case": "tool-04",
+      "text": "",
+      "reason": "step r1-s3 failed: ContextOverflow: {\"error\":{\"message\":\"oMLX prefill memory guard rejected this prompt: Prefill would require ~7.80 GB peak (current 7.29 GB + KV+SDPA 522.23 MB) but the prefill limit"
+    }
+  ]
+}

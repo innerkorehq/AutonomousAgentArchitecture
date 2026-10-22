@@ -1,0 +1,16 @@
+{
+  "algorithm": "best_of_n",
+  "about": "5 samples, model judge picks",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 10.0,
+  "tokens": 3063.8611111111113,
+  "latency_s": 9.062432486194261,
+  "wall_s": 326.27298720799445,
+  "acc_per_1k_tokens": 0.3263855519995648,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

@@ -1,0 +1,16 @@
+{
+  "algorithm": "debate",
+  "about": "3 agents, 1 round, judge",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 7.0,
+  "tokens": 1814.138888888889,
+  "latency_s": 26.49239996296981,
+  "wall_s": 953.7651995419874,
+  "acc_per_1k_tokens": 0.5512257116170819,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

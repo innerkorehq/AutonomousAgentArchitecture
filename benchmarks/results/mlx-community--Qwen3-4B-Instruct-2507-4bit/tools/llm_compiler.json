@@ -1,0 +1,47 @@
+{
+  "algorithm": "llm_compiler",
+  "about": "plan a DAG, run in parallel",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.4,
+  "calls": 6.1,
+  "tokens": 1103.9,
+  "latency_s": 4.814871372365936,
+  "wall_s": 144.45903795800405,
+  "acc_per_1k_tokens": 0.3623516622882507,
+  "errors": 7,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-03",
+      "text": "12900",
+      "reason": "None"
+    },
+    {
+      "case": "tool-03",
+      "text": "",
+      "reason": "invalid plan: the plan has 3 steps (at most 0 more are allowed)"
+    },
+    {
+      "case": "tool-04",
+      "text": "",
+      "reason": "step E2 (multiply) failed"
+    },
+    {
+      "case": "tool-05",
+      "text": "300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-05",
+      "text": "300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-07",
+      "text": "40000",
+      "reason": "None"
+    }
+  ]
+}

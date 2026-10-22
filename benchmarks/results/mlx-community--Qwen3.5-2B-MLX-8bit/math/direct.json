@@ -1,0 +1,16 @@
+{
+  "algorithm": "direct",
+  "about": "one call, think step by step",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 1.0,
+  "tokens": 329.1111111111111,
+  "latency_s": 5.804039888944721,
+  "wall_s": 208.95689608300017,
+  "acc_per_1k_tokens": 3.038487508440243,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

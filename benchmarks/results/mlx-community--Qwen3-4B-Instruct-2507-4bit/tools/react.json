@@ -1,0 +1,16 @@
+{
+  "algorithm": "react",
+  "about": "text Thought/Action/Observation",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 1.0,
+  "calls": 7.4,
+  "tokens": 1940.2,
+  "latency_s": 7.802538036133289,
+  "wall_s": 234.09102020799764,
+  "acc_per_1k_tokens": 0.5154107823935676,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

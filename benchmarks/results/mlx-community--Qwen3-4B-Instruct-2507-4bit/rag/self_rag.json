@@ -1,0 +1,47 @@
+{
+  "algorithm": "self_rag",
+  "about": "reflect on support and usefulness",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.0625,
+  "calls": 2.0,
+  "tokens": 210.8125,
+  "latency_s": 1.4876138436866313,
+  "wall_s": 47.613706417003414,
+  "acc_per_1k_tokens": 0.2964719833975689,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-01",
+      "text": "Zyrlo Corp was founded by Dr. Alan Zyrlo.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-01",
+      "text": "Zyrlo Corp was founded by Dr. Alan R. Zyrlo.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-02",
+      "text": "Zyrlo Corp was founded in 2005.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-02",
+      "text": "Zyrlo Corp was founded in 2005.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-03",
+      "text": "Zyrlo Corp's headquarters is in Atlanta, Georgia.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-03",
+      "text": "Zyrlo Corp's headquarters is in Atlanta, Georgia.",
+      "reason": "None"
+    }
+  ]
+}

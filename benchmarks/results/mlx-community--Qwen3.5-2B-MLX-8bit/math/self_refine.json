@@ -1,0 +1,16 @@
+{
+  "algorithm": "self_refine",
+  "about": "draft, critique, rewrite",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 2.6944444444444446,
+  "tokens": 1177.611111111111,
+  "latency_s": 11.185873824026809,
+  "wall_s": 402.7045462919996,
+  "acc_per_1k_tokens": 0.8491767702976836,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": []
+}

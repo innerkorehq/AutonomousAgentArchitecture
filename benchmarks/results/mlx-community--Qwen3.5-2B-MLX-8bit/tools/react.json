@@ -1,0 +1,47 @@
+{
+  "algorithm": "react",
+  "about": "text Thought/Action/Observation",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.03333333333333333,
+  "calls": 7.3,
+  "tokens": 10660.266666666666,
+  "latency_s": 46.43749554720125,
+  "wall_s": 1393.143694916973,
+  "acc_per_1k_tokens": 0.003126876125675405,
+  "errors": 15,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-01",
+      "text": "or message is confusing.\n\nWait, maybe the tool is expecting the input to be a JSON object with a key named \"query\", but the error is saying that the value of \"query\" is a string, which is correct. But",
+      "reason": "None"
+    },
+    {
+      "case": "tool-01",
+      "text": "",
+      "reason": "max_turns (10) reached without a final answer"
+    },
+    {
+      "case": "tool-02",
+      "text": "",
+      "reason": "max_turns (10) reached without a final answer"
+    },
+    {
+      "case": "tool-02",
+      "text": "",
+      "reason": "max_turns (10) reached without a final answer"
+    },
+    {
+      "case": "tool-03",
+      "text": "",
+      "reason": "max_turns (10) reached without a final answer"
+    },
+    {
+      "case": "tool-03",
+      "text": "",
+      "reason": "max_turns (10) reached without a final answer"
+    }
+  ]
+}

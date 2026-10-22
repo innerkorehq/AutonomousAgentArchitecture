@@ -1,0 +1,15 @@
+{
+  "algorithm": "graph_of_thoughts",
+  "about": "default generate/score/aggregate graph",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 11.0,
+  "tokens": 2713.8055555555557,
+  "latency_s": 14.095813357666783,
+  "wall_s": 507.47799645899795,
+  "acc_per_1k_tokens": 0.36848623806258124,
+  "errors": 0,
+  "failures": []
+}

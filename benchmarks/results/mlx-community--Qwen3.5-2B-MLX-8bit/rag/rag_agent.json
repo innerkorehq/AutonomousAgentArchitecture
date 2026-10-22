@@ -1,0 +1,22 @@
+{
+  "algorithm": "rag_agent",
+  "about": "retrieve with a tool loop",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.96875,
+  "calls": 3.0,
+  "tokens": 984.25,
+  "latency_s": 1.8677874374079693,
+  "wall_s": 59.78167412499897,
+  "acc_per_1k_tokens": 0.984251968503937,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-u4",
+      "text": "Based on the provided evidence, the document does not specify the year the Brenwick lantern festival started. It only states that the festival is held every October.",
+      "reason": "None"
+    }
+  ]
+}

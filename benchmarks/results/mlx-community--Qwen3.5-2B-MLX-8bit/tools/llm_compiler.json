@@ -1,0 +1,47 @@
+{
+  "algorithm": "llm_compiler",
+  "about": "plan a DAG, run in parallel",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.8,
+  "calls": 4.1,
+  "tokens": 1102.8666666666666,
+  "latency_s": 5.994868162467416,
+  "wall_s": 179.85978258398245,
+  "acc_per_1k_tokens": 0.7253823369400956,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-03",
+      "text": "195000",
+      "reason": "None"
+    },
+    {
+      "case": "tool-03",
+      "text": "19500",
+      "reason": "None"
+    },
+    {
+      "case": "tool-08",
+      "text": "200000",
+      "reason": "None"
+    },
+    {
+      "case": "tool-08",
+      "text": "260300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "165400",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "165400",
+      "reason": "None"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "algorithm": "adaptive_rag",
+  "about": "classify, then pick the retrieval depth",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.125,
+  "calls": 2.03125,
+  "tokens": 327.5625,
+  "latency_s": 1.7364704336214345,
+  "wall_s": 55.57771329101524,
+  "acc_per_1k_tokens": 0.3816065636328945,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-01",
+      "text": "company was established in 2011 in the United States.\n\n*Note: There is no widely known public figure named \"Zyrlo\" who founded a company called Zyrlo Corp. The name is likely a brand or company name.*",
+      "reason": "None"
+    },
+    {
+      "case": "rag-01",
+      "text": "company is a fictional entity created by the author of the *Zyrlo* series, **M. Night Shyamalan**. The corporation is named after the protagonist, **Zyrlo**, who is the founder and CEO of the company.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-02",
+      "text": "Zyrlo Corp was founded in **1993**.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-02",
+      "text": "Zyrlo Corp was founded in **1998**.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-03",
+      "text": "Zyrlo Corp is a fictional company created by the video game *The Elder Scrolls V: Skyrim*. As such, it has no real-world headquarters.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-03",
+      "text": "Zyrlo Corp's headquarters is located in **Boulder, Colorado**, United States.",
+      "reason": "None"
+    }
+  ]
+}

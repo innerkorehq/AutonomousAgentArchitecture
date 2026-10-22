@@ -1,0 +1,37 @@
+{
+  "algorithm": "chain_of_verification",
+  "about": "draft, check questions, revise",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.8888888888888888,
+  "calls": 5.944444444444445,
+  "tokens": 1553.611111111111,
+  "latency_s": 10.838737337972715,
+  "wall_s": 390.21208529199794,
+  "acc_per_1k_tokens": 0.5721437511174683,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-03",
+      "text": "Answer: 127",
+      "reason": "None"
+    },
+    {
+      "case": "math-06",
+      "text": "Answer: 1000",
+      "reason": "None"
+    },
+    {
+      "case": "math-11",
+      "text": "Answer: 14",
+      "reason": "None"
+    },
+    {
+      "case": "math-14",
+      "text": "Answer: 1536",
+      "reason": "None"
+    }
+  ]
+}

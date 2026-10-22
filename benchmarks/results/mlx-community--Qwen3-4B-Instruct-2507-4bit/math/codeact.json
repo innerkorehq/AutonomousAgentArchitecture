@@ -1,0 +1,15 @@
+{
+  "algorithm": "codeact",
+  "about": "writes and runs Python",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 1.0,
+  "tokens": 276.55555555555554,
+  "latency_s": 3.7753961920277814,
+  "wall_s": 135.92087608300062,
+  "acc_per_1k_tokens": 3.6159100040176777,
+  "errors": 0,
+  "failures": []
+}

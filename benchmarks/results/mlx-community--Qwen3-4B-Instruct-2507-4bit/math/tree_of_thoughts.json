@@ -1,0 +1,21 @@
+{
+  "algorithm": "tree_of_thoughts",
+  "about": "depth 2, width 2",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.9722222222222222,
+  "calls": 4.0,
+  "tokens": 985.2777777777778,
+  "latency_s": 5.560800342555619,
+  "wall_s": 200.2020188749957,
+  "acc_per_1k_tokens": 0.986749365661122,
+  "errors": 0,
+  "failures": [
+    {
+      "case": "math-06",
+      "text": "Each of the 50 people gets one ticket free, so only 49 tickets need to be paid for.  \nEach ticket costs $40, so total cost is 49 \u00d7 40 = 1960 dollars.  \nAnswer: 1960",
+      "reason": "None"
+    }
+  ]
+}

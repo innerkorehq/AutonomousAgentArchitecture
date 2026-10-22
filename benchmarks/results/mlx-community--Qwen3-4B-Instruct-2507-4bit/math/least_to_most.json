@@ -1,0 +1,15 @@
+{
+  "algorithm": "least_to_most",
+  "about": "sub-questions first, then the answer",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 7.166666666666667,
+  "tokens": 2356.8611111111113,
+  "latency_s": 20.420465687499828,
+  "wall_s": 372.98991333400045,
+  "acc_per_1k_tokens": 0.42429313941565405,
+  "errors": 0,
+  "failures": []
+}

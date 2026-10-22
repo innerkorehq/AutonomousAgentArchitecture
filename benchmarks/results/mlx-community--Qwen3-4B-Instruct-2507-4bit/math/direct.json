@@ -1,0 +1,15 @@
+{
+  "algorithm": "direct",
+  "about": "one call, think step by step",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 1.0,
+  "calls": 1.0,
+  "tokens": 192.27777777777777,
+  "latency_s": 3.25331386358347,
+  "wall_s": 117.12811445799889,
+  "acc_per_1k_tokens": 5.200809014735626,
+  "errors": 0,
+  "failures": []
+}

@@ -1,0 +1,21 @@
+{
+  "algorithm": "self_refine",
+  "about": "draft, critique, rewrite",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.9722222222222222,
+  "calls": 2.611111111111111,
+  "tokens": 968.1388888888889,
+  "latency_s": 13.35868704172228,
+  "wall_s": 480.93472108300193,
+  "acc_per_1k_tokens": 1.004217714400482,
+  "errors": 0,
+  "failures": [
+    {
+      "case": "math-12",
+      "text": " $16.  \nThere are 38 people in the group, and the group receives 3 tickets for free.  \nThis means only 35 tickets are paid for, since 3 tickets are free.  \nCost = 35 \u00d7 16 = 640 dollars.  \n\nAnswer: 640",
+      "reason": "None"
+    }
+  ]
+}

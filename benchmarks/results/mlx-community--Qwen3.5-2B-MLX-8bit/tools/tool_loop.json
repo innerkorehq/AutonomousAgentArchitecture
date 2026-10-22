@@ -1,0 +1,42 @@
+{
+  "algorithm": "tool_loop",
+  "about": "native tool calling",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.8333333333333334,
+  "calls": 6.333333333333333,
+  "tokens": 2144.0333333333333,
+  "latency_s": 3.7268820373996276,
+  "wall_s": 111.81887304099655,
+  "acc_per_1k_tokens": 0.3886755491985511,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-03",
+      "text": "Answer: 110100",
+      "reason": "None"
+    },
+    {
+      "case": "tool-03",
+      "text": "Answer: 110100",
+      "reason": "None"
+    },
+    {
+      "case": "tool-08",
+      "text": "The total population of Karsten, Quillon, and Veldor is 95,000.\n\nAnswer: 95000",
+      "reason": "None"
+    },
+    {
+      "case": "tool-12",
+      "text": "Pellam has 121500 more people than Orvane.\n\nAnswer: 121500",
+      "reason": "None"
+    },
+    {
+      "case": "tool-12",
+      "text": "Pellam has 121,500 more people than Orvane.\n\nAnswer: 121500",
+      "reason": "None"
+    }
+  ]
+}

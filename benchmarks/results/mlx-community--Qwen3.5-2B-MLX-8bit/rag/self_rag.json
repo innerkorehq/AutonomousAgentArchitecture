@@ -1,0 +1,47 @@
+{
+  "algorithm": "self_rag",
+  "about": "reflect on support and usefulness",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.5625,
+  "calls": 5.875,
+  "tokens": 1128.5,
+  "latency_s": 3.382077584596118,
+  "wall_s": 108.24182704099803,
+  "acc_per_1k_tokens": 0.4984492689410722,
+  "errors": 4,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-01",
+      "text": "Zyrlo Corp was founded by **Zyrlo Corporation** itself (it is a subsidiary of the Zyrlo Group). The company was established in 1996 in the United States.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-01",
+      "text": "rp\" in major global business databases. This question likely refers to a fictional entity, a very niche local company, or a confusion with a similarly named company (such as Zylo Corp or Zyrus Corp).*",
+      "reason": "None"
+    },
+    {
+      "case": "rag-02",
+      "text": "I am not sure. Zyrlo Corp was founded in **1999**.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-03",
+      "text": "Zyrlo Corp's headquarters is in **Baltimore, Maryland**, United States.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-04",
+      "text": "-invasive, non-surgical treatment for **inflammatory bowel disease (IBD)** and other inflammatory conditions. It uses a combination of heat, cold, and light to reduce inflammation and promote healing.",
+      "reason": "None"
+    },
+    {
+      "case": "rag-06",
+      "text": "Ilse Vandermeer was succeeded by **Johannes de Graaf** as chief executive of the Dutch bank ING.",
+      "reason": "None"
+    }
+  ]
+}

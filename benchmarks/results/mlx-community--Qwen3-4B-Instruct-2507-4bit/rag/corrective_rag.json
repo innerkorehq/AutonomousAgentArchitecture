@@ -1,0 +1,47 @@
+{
+  "algorithm": "corrective_rag",
+  "about": "grade chunks, rewrite, answer",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "rag",
+  "runs": 32,
+  "accuracy": 0.8125,
+  "calls": 9.1875,
+  "tokens": 1316.59375,
+  "latency_s": 9.00119301174982,
+  "wall_s": 288.0626355839777,
+  "acc_per_1k_tokens": 0.6171227836984643,
+  "errors": 14,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "rag-09",
+      "text": "{\"graded\": 10, \"queries\": [\"Who designed the language that Halcyon is written in?\", \"Who designed the programming language used to develop Halcyon?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    },
+    {
+      "case": "rag-09",
+      "text": "{\"graded\": 10, \"queries\": [\"Who designed the language that Halcyon is written in?\", \"Who designed the programming language used to develop Halcyon?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    },
+    {
+      "case": "rag-11",
+      "text": "{\"graded\": 10, \"queries\": [\"How long did the chief executive who succeeded the founder serve?\", \"How long did the successor to the founder serve as chief executive?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    },
+    {
+      "case": "rag-11",
+      "text": "{\"graded\": 10, \"queries\": [\"How long did the chief executive who succeeded the founder serve?\", \"How long did the successor to the founder serve as chief executive?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    },
+    {
+      "case": "rag-12",
+      "text": "{\"graded\": 10, \"queries\": [\"What bytecode does the language of the Halcyon engine compile to?\", \"What is the target bytecode used by the Halcyon engine's programming language?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    },
+    {
+      "case": "rag-12",
+      "text": "{\"graded\": 10, \"queries\": [\"What bytecode does the language of the Halcyon engine compile to?\", \"What is the bytecode target of the Halcyon engine's programming language?\"], \"sources\": []}",
+      "reason": "no relevant evidence was found"
+    }
+  ]
+}

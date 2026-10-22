@@ -1,0 +1,37 @@
+{
+  "algorithm": "rewoo",
+  "about": "plan once with placeholders, run, solve",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.8666666666666667,
+  "calls": 4.2,
+  "tokens": 853.7333333333333,
+  "latency_s": 4.39033668343036,
+  "wall_s": 131.72345266700722,
+  "acc_per_1k_tokens": 1.015149148836483,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-10",
+      "text": "Answer: 1500",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "Answer: 161400",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "Answer: 19500",
+      "reason": "None"
+    },
+    {
+      "case": "tool-14",
+      "text": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "reason": "None"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "algorithm": "least_to_most",
+  "about": "sub-questions first, then the answer",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.8888888888888888,
+  "calls": 6.944444444444445,
+  "tokens": 2819.472222222222,
+  "latency_s": 14.2792593113057,
+  "wall_s": 514.0742159999936,
+  "acc_per_1k_tokens": 0.3152678298735973,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-11",
+      "text": "of girls by subtracting the number of boys from the total number of students: $28 - 9 = 19$ girls. Since each student brings 7 cookies, the total number of cookies is $19 \\times 7 = 133$.\n\nAnswer: 133",
+      "reason": "None"
+    },
+    {
+      "case": "math-11",
+      "text": "There are 28 students total, and 9 are boys. Therefore, the number of girls is $28 - 9 = 19$. Each student brings 7 cookies. The total number of cookies is $19 \\times 7 = 133$.\n\nAnswer: 133",
+      "reason": "None"
+    },
+    {
+      "case": "math-12",
+      "text": "e receives 3 tickets free, which is $3 \\times 3 = 9$ tickets. The number of tickets they need to buy is $38 - 9 = 29$. Since each ticket costs $16, the total cost is $29 \\times 16 = 464$.\n\nAnswer: 464",
+      "reason": "None"
+    },
+    {
+      "case": "math-18",
+      "text": "The group has 47 people. Since 3 tickets are free, they need to buy $47 - 3 = 44$ tickets. At $25 per ticket, the total cost is $44 \\times 25 = 1100 / 4 = 275$.\n\nAnswer: 275",
+      "reason": "None"
+    }
+  ]
+}

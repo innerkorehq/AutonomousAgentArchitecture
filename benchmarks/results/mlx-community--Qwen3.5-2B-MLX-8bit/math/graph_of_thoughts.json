@@ -1,0 +1,32 @@
+{
+  "algorithm": "graph_of_thoughts",
+  "about": "default generate/score/aggregate graph",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.9166666666666666,
+  "calls": 11.0,
+  "tokens": 3424.9444444444443,
+  "latency_s": 16.497964817055617,
+  "wall_s": 593.9512957920015,
+  "acc_per_1k_tokens": 0.2676442440266671,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-12",
+      "text": "s free\". Maybe just 3 tickets are free.\nBut \"A group of 38 people\" suggests a rate.\nIs it possible the problem meant \"3 tickets free for every 3 people\"?\nLet's assume the standard trick question logic",
+      "reason": "None"
+    },
+    {
+      "case": "math-18",
+      "text": "p of 47, not that they buy 3 tickets. The total cost is simply $47 \\times 25$. $47 \\times 25 = 1175$. Subtracting 0 for the free tickets gives 1175. The previous answer of 1100 was wrong. Answer: 1175",
+      "reason": "None"
+    },
+    {
+      "case": "math-18",
+      "text": "implies the entire group receives a voucher for 3 tickets, resulting in a total cost of $0. Any interpretation involving per-person discounts or ratios is not supported by the literal text.\n\nAnswer: 0",
+      "reason": "None"
+    }
+  ]
+}

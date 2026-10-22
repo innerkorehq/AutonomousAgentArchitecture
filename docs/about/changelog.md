@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Benchmarks** on real models: `benchmarks/` (not part of the package) runs the algorithms on arithmetic, tool-use and retrieval tasks against any OpenAI-compatible server and reports accuracy, model calls, tokens and latency; the first results (Qwen3-4B and Qwen3.5-2B on a laptop, via omlx) and a "when to use which" table are in the new *Benchmarks* guide. Findings: on easy problems a single call matches the search algorithms at a fraction of the tokens; plan-first tool algorithms depend on the model's ability to plan; retrieval algorithms that let the model decide whether to retrieve inherit its habits.
+
 ## 0.6.0 (2026-10-19)
 
 - MCP generator, **hot reload**: `aaa mcp serve --reload` (SIGHUP) and `--watch [SECONDS]`; `aaa.mcp.ReloadableServer` for code and `aaa-server`. The new server is built completely first and swapped in only if it is sound; a reload may not refer to code that was not running at startup (checked before compiling), change the server's identity or capabilities, or use `runtime.engine`. Calls in flight finish on the old server. New `MCPSpec.code_refs()`.

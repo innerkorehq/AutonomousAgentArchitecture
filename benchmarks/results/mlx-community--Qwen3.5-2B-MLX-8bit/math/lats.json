@@ -1,0 +1,27 @@
+{
+  "algorithm": "lats",
+  "about": "tree search, 3 iterations",
+  "model": "mlx-community--Qwen3.5-2B-MLX-8bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.9444444444444444,
+  "calls": 8.25,
+  "tokens": 2875.3611111111113,
+  "latency_s": 9.507016458361452,
+  "wall_s": 342.27452729200013,
+  "acc_per_1k_tokens": 0.3284611594678929,
+  "errors": 2,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-14",
+      "text": "879",
+      "reason": "None"
+    },
+    {
+      "case": "math-15",
+      "text": "80",
+      "reason": "None"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "algorithm": "chain_of_verification",
+  "about": "draft, check questions, revise",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "math",
+  "runs": 36,
+  "accuracy": 0.9722222222222222,
+  "calls": 6.0,
+  "tokens": 1253.5555555555557,
+  "latency_s": 14.881146427165529,
+  "wall_s": 535.7448180420033,
+  "acc_per_1k_tokens": 0.7755717071441233,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "math-06",
+      "text": "Answer: 0",
+      "reason": "None"
+    }
+  ]
+}

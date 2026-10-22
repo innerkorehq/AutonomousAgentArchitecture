@@ -1,0 +1,47 @@
+{
+  "algorithm": "tool_loop",
+  "about": "native tool calling",
+  "model": "mlx-community--Qwen3-4B-Instruct-2507-4bit",
+  "family": "tools",
+  "runs": 30,
+  "accuracy": 0.8,
+  "calls": 5.133333333333334,
+  "tokens": 1339.6,
+  "latency_s": 2.957229012433527,
+  "wall_s": 88.73029495900118,
+  "acc_per_1k_tokens": 0.5971931919976113,
+  "errors": 0,
+  "transient_errors": 0,
+  "failures": [
+    {
+      "case": "tool-03",
+      "text": "Answer: 192300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-03",
+      "text": "Answer: 192300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-08",
+      "text": "Answer: 260300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-08",
+      "text": "Answer: 260300",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "Answer: 220400",
+      "reason": "None"
+    },
+    {
+      "case": "tool-13",
+      "text": "Answer: 220400",
+      "reason": "None"
+    }
+  ]
+}
