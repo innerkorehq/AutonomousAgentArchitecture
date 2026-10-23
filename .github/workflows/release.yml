@@ -23,7 +23,7 @@ jobs:
     outputs:
       already_published: ${{ steps.exists.outputs.published }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       - name: Tag matches the package version
         if: github.event_name == 'release'
@@ -78,7 +78,7 @@ jobs:
       AAA_TEST_POSTGRES_URL: postgresql://postgres:aaa@localhost:5432/postgres
       AAA_TEST_REDIS_URL: redis://localhost:6379/0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
