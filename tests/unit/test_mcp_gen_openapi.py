@@ -16,17 +16,20 @@ from aaa.mcp.config import SpecError
 from aaa.mcp.spec import MCPSpec
 
 
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+def bound_socket() -> socket.socket:
+    """A socket already bound to a free port. Held open and handed to uvicorn, so the port cannot be taken
+    by another process (or handed out twice) between choosing it and serving on it."""
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    return s
 
 
 class Backend:
     def __init__(self) -> None:
         self.seen: list[tuple[str, str, dict[str, str], bytes]] = []
         self.other_seen: list[tuple[str, dict[str, str]]] = []
-        self.port, self.other_port = free_port(), free_port()
+        self.socks = (bound_socket(), bound_socket())
+        self.port, self.other_port = (s.getsockname()[1] for s in self.socks)
         self.base = f"http://127.0.0.1:{self.port}"
 
     def record(self, request: Request, body: bytes = b"") -> None:
@@ -148,7 +151,10 @@ async def backend():
             uvicorn.Config(b.other_app(), host="127.0.0.1", port=b.other_port, log_level="error")
         ),
     ]
-    tasks = [asyncio.create_task(s.serve()) for s in servers]
+    tasks = [
+        asyncio.create_task(s.serve(sockets=[sock]))
+        for s, sock in zip(servers, b.socks, strict=True)
+    ]
     while not all(s.started for s in servers):
         await asyncio.sleep(0.02)
     yield b
